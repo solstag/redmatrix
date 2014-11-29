@@ -117,7 +117,7 @@ function new_channel_content(&$a) {
 		'$name'         => $name,
 		'$label_role'   => t('Channel Type'),
 		'$help_role'   => t('Please choose a channel type (such as social networking or community forum) and privacy requirements so we can select the best permissions for you'),
-		'$role_select'  => role_selector(($privacy_role) ? $privacy_role : 'social'),
+		'$role_select'  => role_selector(($privacy_role) ? $privacy_role : 'social_private'),
 		'$nickname'     => $nickname,
 		'$submit'       => t('Create')
 	));

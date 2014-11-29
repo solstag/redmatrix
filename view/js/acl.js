@@ -1,15 +1,21 @@
-function ACL(backend_url, preset){
+function ACL(backend_url, preset_access){
 	that = this;
 	
 	that.url = backend_url;
+	that.preset = [
+		(preset_access[0] || []),
+		(preset_access[1] || []),
+		(preset_access[2] || []),
+		(preset_access[3] || [])
+	];
 	
 	that.kp_timer = null;
 	
-	if (preset==undefined) preset = [];
-	that.allow_cid = (preset[0] || []);
-	that.allow_gid = (preset[1] || []);
-	that.deny_cid  = (preset[2] || []);
-	that.deny_gid  = (preset[3] || []);
+	if (that.preset==undefined) that.preset = [];
+	that.allow_cid = that.preset[0].slice();
+	that.allow_gid = that.preset[1].slice();
+	that.deny_cid  = that.preset[2].slice();
+	that.deny_gid  = that.preset[3].slice();
 	that.group_uids = [];
 	that.nw = 4; //items per row. should be calulated from #acl-list.width
 	
@@ -20,7 +26,7 @@ function ACL(backend_url, preset){
 	// set the initial ACL lists in case the enclosing form gets submitted before the ajax loader completes. 
 	that.on_submit();
 
-	if (preset.length==0) that.showall.removeClass("btn-default").addClass("btn-warning");
+	if (that.preset.length==0) that.showall.removeClass("btn-default").addClass("btn-warning");
 	
 	/*events*/
 
@@ -42,20 +48,20 @@ function ACL(backend_url, preset){
 // no longer called on submit - call to update whenever a change occurs to the acl list. 
 
 ACL.prototype.on_submit = function(){
-	aclfileds = $("#acl-fields").html("");
+	aclfields = $("#acl-fields").html("");
 	$(that.allow_gid).each(function(i,v){
-		aclfileds.append("<input type='hidden' name='group_allow[]' value='"+v+"'>");
+		aclfields.append("<input type='hidden' name='group_allow[]' value='"+v+"'>");
 	});
 	$(that.allow_cid).each(function(i,v){
-		aclfileds.append("<input type='hidden' name='contact_allow[]' value='"+v+"'>");
+		aclfields.append("<input type='hidden' name='contact_allow[]' value='"+v+"'>");
 	});
 	$(that.deny_gid).each(function(i,v){
-		aclfileds.append("<input type='hidden' name='group_deny[]' value='"+v+"'>");
+		aclfields.append("<input type='hidden' name='group_deny[]' value='"+v+"'>");
 	});
 	$(that.deny_cid).each(function(i,v){
-		aclfileds.append("<input type='hidden' name='contact_deny[]' value='"+v+"'>");
+		aclfields.append("<input type='hidden' name='contact_deny[]' value='"+v+"'>");
 	});	
-//	alert(aclfileds);
+//	alert(aclfields);
 
 }
 

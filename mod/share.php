@@ -19,8 +19,6 @@ function share_init(&$a) {
 	);
 	if(! $r)
 		killme();
-	if(($r[0]['item_private']) && ($r[0]['xchan_network'] !== 'rss'))
-		killme();
 
 	$sql_extra = item_permissions_sql($r[0]['uid']);
 
@@ -43,6 +41,7 @@ function share_init(&$a) {
 		killme();
 
 	xchan_query($r);
+	unobscure($r[0]);
 
 	if (strpos($r[0]['body'], "[/share]") !== false) {
 		$pos = strpos($r[0]['body'], "[share");

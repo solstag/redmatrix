@@ -792,6 +792,9 @@ function role_selector($current) {
 			array('soapbox' => t('Celebrity/Soapbox'), 'repository' => t('Group Repository'))),
 		'other' => array( t('Other'),
 			array('custom' => t('Custom/Expert Mode'))));
+	$roles = array(
+		'social' => array( t('Social Networking'), array('social_private' => t('Private'))),
+		'other' => array( t('Other'), array('custom' => t('Custom/Expert Mode'))) );
 	$o = '<select name="permissions_role" id="privacy-role-select">';
 	foreach($roles as $k => $v) {
 		$o .= '<optgroup label="'. htmlspecialchars($v[0]) . '" >';
