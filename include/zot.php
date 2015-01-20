@@ -1417,8 +1417,9 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 			return;
 		}
 	}
-	
+
 	foreach($deliveries as $d) {
+		$local_public = $public;
 		$r = q("select * from channel where channel_hash = '%s' limit 1",
 			dbesc($d['hash'])
 		);
@@ -1432,8 +1433,18 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 		$channel = $r[0];
 
 		// allow public postings to the sys channel regardless of permissions
-		if(($channel['channel_pageflags'] & PAGE_SYSTEM) && (! $arr['item_private']))
-			$public = true;
+		if(($channel['channel_pageflags'] & PAGE_SYSTEM) && (! $arr['item_private'])) {
+			$local_public = true;
+
+			$r = q("select xchan_flags from xchan where xchan_hash = '%s' limit 1",
+				dbesc($sender['hash'])
+			);
+			// don't import sys channel posts from selfcensored authors
+			if($r && ($r[0]['xchan_flags'] & XCHAN_FLAGS_SELFCENSORED)) {
+				$local_public = false;
+				continue;
+			}
+		}
 
 		$tag_delivery = tgroup_check($channel['channel_id'],$arr);
 
@@ -1452,7 +1463,7 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 			}
 		}
 
-		if((! perm_is_allowed($channel['channel_id'],$sender['hash'],$perm)) && (! $tag_delivery) && (! $public)) {
+		if((! perm_is_allowed($channel['channel_id'],$sender['hash'],$perm)) && (! $tag_delivery) && (! $local_public)) {
 			logger("permission denied for delivery to channel {$channel['channel_id']} {$channel['channel_address']}");
 			$result[] = array($d['hash'],'permission denied',$channel['channel_name'] . ' <' . $channel['channel_address'] . '@' . get_app()->get_hostname() . '>',$arr['mid']);
 			continue;
@@ -1487,7 +1498,7 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 				// the top level post is unlikely to be imported and
 				// this is just an exercise in futility.   
 
-				if((! $relay) && (! $request) && (! $public) 
+				if((! $relay) && (! $request) && (! $local_public) 
 					&& perm_is_allowed($channel['channel_id'],$sender['hash'],'send_stream')) {
 					proc_run('php', 'include/notifier.php', 'request', $channel['channel_id'], $sender['hash'], $arr['parent_mid']);
 				}
@@ -1531,15 +1542,20 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 			continue;
 		}
 
-		$r = q("select id, edited, item_flags, mid, parent_mid from item where mid = '%s' and uid = %d limit 1",
+		$r = q("select id, edited, item_restrict, item_flags, mid, parent_mid from item where mid = '%s' and uid = %d limit 1",
 			dbesc($arr['mid']),
 			intval($channel['channel_id'])
 		);
 		if($r) {
 			// We already have this post.
-			// Maybe it has been edited? 
 			$item_id = $r[0]['id'];
-			if($arr['edited'] > $r[0]['edited']) {
+			if($r[0]['item_restrict'] & ITEM_DELETED) {
+				// It was deleted locally. 
+				$result[] = array($d['hash'],'update ignored',$channel['channel_name'] . ' <' . $channel['channel_address'] . '@' . get_app()->get_hostname() . '>',$arr['mid']);
+				continue;
+			}			
+			// Maybe it has been edited? 
+			elseif($arr['edited'] > $r[0]['edited']) {
 				$arr['id'] = $r[0]['id'];
 				$arr['uid'] = $channel['channel_id'];
 				update_imported_item($sender,$arr,$channel['channel_id']);
@@ -2351,6 +2367,9 @@ function build_sync_packet($uid = 0, $packet = null, $groups_changed = false) {
 	$a = get_app();
 
 	logger('build_sync_packet');
+
+	if($packet)
+		logger('packet: ' . print_r($packet,true),LOGGER_DATA);
 
 	if(! $uid)
 		$uid = local_user();

@@ -76,7 +76,7 @@ function poco_init(&$a) {
 			$sql_extra ",
 			intval($channel_id)
 		);
-		$c = q("select * from menu_item where ( mitem_flags & " . intval(MENU_ITEM_CHATROOM) . " )>0 and allow_cid = '' and allow_gid = '' and deny_cid = '' and deny_gid = '' and mitem_channel_id = %d",
+		$rooms = q("select * from menu_item where ( mitem_flags & " . intval(MENU_ITEM_CHATROOM) . " )>0 and allow_cid = '' and allow_gid = '' and deny_cid = '' and deny_gid = '' and mitem_channel_id = %d",
 			intval($channel_id)
 		);
 	}
@@ -119,10 +119,10 @@ function poco_init(&$a) {
 	$ret['itemsPerPage'] = (string) $itemsPerPage;
 	$ret['totalResults'] = (string) $totalResults;
 
-	if($c) {
+	if($rooms) {
 		$ret['chatrooms'] = array();
-		foreach($c as $d) {
-			$ret['chatrooms'][] = array('url' => $d['mitem_link'], 'desc' => $d['mitem_desc']);
+		foreach($rooms as $room) {
+			$ret['chatrooms'][] = array('url' => $room['mitem_link'], 'desc' => $room['mitem_desc']);
 		}
 	}
 
@@ -178,7 +178,8 @@ function poco_init(&$a) {
 				if($fields_ret['photos'])
 					$entry['photos'] = array(array('value' => $rr['xchan_photo_l'], 'mimetype' => $rr['xchan_photo_mimetype'], 'type' => 'profile'));
 				if($fields_ret['rating']) {
-					$entry['rating'] = ((array_key_exists('abook_rating',$rr)) ? array(intval($rr['abook_rating'])) : 0);
+					$entry['rating'] = ((array_key_exists('abook_rating',$rr)) ? intval($rr['abook_rating']) : 0);
+					$entry['rating_text'] = ((array_key_exists('abook_rating_text',$rr)) ? $rr['abook_rating_text'] : '');
 					// maybe this should be a composite calculated rating in $system_mode
 					if($system_mode)
 						$entry['rating'] = 0;

@@ -264,6 +264,7 @@ function localize_item(&$item){
 	}
 
 
+
 /*
 // FIXME store parent item as object or target
 // (and update to json storage)
@@ -398,10 +399,15 @@ function count_descendants($item) {
 
 function visible_activity($item) {
 
-	// likes can apply to other things besides posts. Check if they are post children, in which case we handle them specially
+	// likes (etc.) can apply to other things besides posts. Check if they are post children, 
+	// in which case we handle them specially
 
-	if((activity_match($item['verb'],ACTIVITY_LIKE) || activity_match($item['verb'],ACTIVITY_DISLIKE)) && ($item['mid'] != $item['parent_mid']))
-		return false;
+	$hidden_activities = array(ACTIVITY_LIKE, ACTIVITY_DISLIKE, ACTIVITY_AGREE, ACTIVITY_DISAGREE, ACTIVITY_ABSTAIN);
+	foreach($hidden_activities as $act) {
+		if((activity_match($item['verb'],$act)) && ($item['mid'] != $item['parent_mid'])) {
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -431,13 +437,18 @@ function conversation(&$a, $items, $mode, $update, $page_mode = 'traditional', $
 
 	$arr_blocked = null;
 
-	if(local_user()) {
+	if(local_user()) 
 		$str_blocked = get_pconfig(local_user(),'system','blocked');
-		if($str_blocked) {
+	if(! local_user() && ($mode == 'network')) {
+		$sys = get_sys_channel();
+		$id = $sys['channel_id'];
+ 		$str_blocked = get_pconfig($id,'system','blocked');
+	}
+	
+	if($str_blocked) {
 			$arr_blocked = explode(',',$str_blocked);
 			for($x = 0; $x < count($arr_blocked); $x ++)
-				$arr_blocked[$x] = trim($arr_blocked[$x]);
-		}
+			$arr_blocked[$x] = trim($arr_blocked[$x]);
 	}
 
 
@@ -541,8 +552,7 @@ function conversation(&$a, $items, $mode, $update, $page_mode = 'traditional', $
 
 	$items = $cb['items'];
 
-	$alike = array();
-	$dlike = array();
+	$conv_responses = array(array('like'),array('dislike'),array('agree'),array('disagree'),array('abstain'));
 
 	// array with html for each thread (parent+comments)
 	$threads = array();
@@ -661,7 +671,6 @@ function conversation(&$a, $items, $mode, $update, $page_mode = 'traditional', $
 
 				$body = prepare_body($item,true);
 
-				//$tmp_item = replace_macros($tpl,array(
 				$tmp_item = array(
 					'template' => $tpl,
 					'toplevel' => 'toplevel_item',
@@ -774,10 +783,14 @@ function conversation(&$a, $items, $mode, $update, $page_mode = 'traditional', $
 					}
 				}
 
-				like_puller($a, $item, $alike, 'like');
+				like_puller($a, $item, $conv_responses, 'like');
 
 				if(feature_enabled($profile_owner, 'dislike'))
-					like_puller($a, $item, $dlike, 'dislike');
+					like_puller($a, $item, $conv_responses, 'dislike');
+
+				like_puller($a, $item, $conv_responses, 'agree');
+				like_puller($a, $item, $conv_responses, 'disagree');
+				like_puller($a, $item, $conv_responses, 'abstain');
 
 				if(! visible_activity($item)) {
 					continue;
@@ -796,7 +809,7 @@ function conversation(&$a, $items, $mode, $update, $page_mode = 'traditional', $
 				}
 			}
 
-			$threads = $conv->get_template_data($alike, $dlike);
+			$threads = $conv->get_template_data($conv_responses);
 			if(!$threads) {
 				logger('[ERROR] conversation : Failed to get template data.', LOGGER_DEBUG);
 				$threads = array();
@@ -967,7 +980,32 @@ function item_photo_menu($item){
 function like_puller($a, $item, &$arr, $mode) {
 
 	$url = '';
-	$verb = (($mode === 'like') ? ACTIVITY_LIKE : ACTIVITY_DISLIKE);
+
+	switch($mode) {
+		case 'like':
+		case 'unlike':
+			$verb = ACTIVITY_LIKE;
+			break;
+		case 'dislike':
+		case 'undislike':
+			$verb = ACTIVITY_DISLIKE;
+			break;
+		case 'agree':
+		case 'unagree':
+			$verb = ACTIVITY_AGREE;
+			break;
+		case 'disagree':
+		case 'undisagree':
+			$verb = ACTIVITY_DISAGREE;
+			break;
+		case 'abstain':
+		case 'unabstain':
+			$verb = ACTIVITY_ABSTAIN;
+			break;
+		default:
+			return;
+			break;
+	}
 
 	if((activity_match($item['verb'], $verb)) && ($item['id'] != $item['parent'])) {
 
@@ -977,20 +1015,20 @@ function like_puller($a, $item, &$arr, $mode) {
 		if(! $item['thr_parent'])
 			$item['thr_parent'] = $item['parent_mid'];
 
-		if(! ((isset($arr[$item['thr_parent'] . '-l'])) && (is_array($arr[$item['thr_parent'] . '-l']))))
-			$arr[$item['thr_parent'] . '-l'] = array();
+		if(! ((isset($arr[$mode][$item['thr_parent'] . '-l'])) && (is_array($arr[$mode][$item['thr_parent'] . '-l']))))
+			$arr[$mode][$item['thr_parent'] . '-l'] = array();
 
-		if(! isset($arr[$item['thr_parent']]))
-			$arr[$item['thr_parent']] = 1;
+		if(! isset($arr[$mode][$item['thr_parent']]))
+			$arr[$mode][$item['thr_parent']] = 1;
 		else
-			$arr[$item['thr_parent']] ++;
+			$arr[$mode][$item['thr_parent']] ++;
 
 		$name = (($item['author']['xchan_name']) ? $item['author']['xchan_name'] : t('Unknown'));
 
 		if($url)
-			$arr[$item['thr_parent'] . '-l'][] = '<a href="'. $url . '">' . $name . '</a>';
+			$arr[$mode][$item['thr_parent'] . '-l'][] = '<a href="'. $url . '">' . $name . '</a>';
 		else
-			$arr[$item['thr_parent'] . '-l'][] = '<a href="#" class="disabled">' . $name . '</a>';
+			$arr[$mode][$item['thr_parent'] . '-l'][] = '<a href="#" class="disabled">' . $name . '</a>';
 	}
 	return;
 }
@@ -1095,8 +1133,8 @@ function status_editor($a,$x,$popup=false) {
 	$jotplugins = '';
 	$jotnets = '';
 
-
-	$preview = ((feature_enabled($x['profile_uid'],'preview')) ? t('Preview') : '');
+	$preview = t('Preview');
+//	$preview = ((feature_enabled($x['profile_uid'],'preview')) ? t('Preview') : '');
 	if(x($x,'nopreview'))
 		$preview = '';
 
@@ -1128,13 +1166,13 @@ function status_editor($a,$x,$popup=false) {
 		'$shortaudio' => t('audio link'),
 		'$setloc' => t('Set your location'),
 		'$shortsetloc' => t('set location'),
-		'$noloc' => t('Clear browser location'),
+		'$noloc' => ((get_pconfig($x['profile_uid'],'system','use_browser_location')) ? t('Clear browser location') : ''),
 		'$shortnoloc' => t('clear location'),
 		'$title' => ((x($x,'title')) ? htmlspecialchars($x['title'], ENT_COMPAT,'UTF-8') : ''),
-		'$placeholdertitle' => t('Set title'),
+		'$placeholdertitle' => t('Title (optional)'),
 		'$catsenabled' => ((feature_enabled($x['profile_uid'],'categories') && (! $webpage)) ? 'categories' : ''),
 		'$category' => "",
-		'$placeholdercategory' => t('Categories (comma-separated list)'),
+		'$placeholdercategory' => t('Categories (optional, comma-separated list)'),
 		'$wait' => t('Please wait'),
 		'$permset' => t('Permission settings'),
 		'$shortpermset' => t('permissions'),
@@ -1534,7 +1572,7 @@ function profile_tabs($a, $is_owner=False, $nickname=Null){
 		$tabs[] = array(
 			'label' => t('Files'),
 			'url'	=> $a->get_baseurl() . '/cloud/' . $nickname . ((get_observer_hash()) ? '' : '?f=&davguest=1'),
-			'sel'	=> ((argv(0) == 'cloud') ? 'active' : ''),
+			'sel'	=> ((argv(0) == 'cloud' || argv(0) == 'sharedwithme') ? 'active' : ''),
 			'title' => t('Files and Storage'),
 			'id'    => 'files-tab',
 		);

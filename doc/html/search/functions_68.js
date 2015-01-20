@@ -1,7 +1,7 @@
 var searchData=
 [
   ['handle_5ffeed',['handle_feed',['../items_8php.html#a52c24114b73c0bdb605a03cd29712223',1,'items.php']]],
-  ['handle_5ftag',['handle_tag',['../item_8php.html#aa22feef4de326e1d7078dedd892e615c',1,'item.php']]],
+  ['handle_5ftag',['handle_tag',['../text_8php.html#aa22feef4de326e1d7078dedd892e615c',1,'text.php']]],
   ['has_5fpermissions',['has_permissions',['../items_8php.html#a77051724d1784074ff187e73a4db93fe',1,'items.php']]],
   ['hcard_5fcontent',['hcard_content',['../hcard_8php.html#a3663012f1549849af88aba2bb87388e3',1,'hcard.php']]],
   ['hcard_5finit',['hcard_init',['../hcard_8php.html#ac34f26b0e6a37eef44fa49bea135136d',1,'hcard.php']]],
@@ -25,5 +25,7 @@ var searchData=
   ['html2plain',['html2plain',['../html2plain_8php.html#ab3e121fa9f3feb16f9f942e705bc6c04',1,'html2plain.php']]],
   ['htmlactionspanel',['htmlActionsPanel',['../classRedMatrix_1_1RedDAV_1_1RedBrowser.html#a3bd98af2d1cdfd8f26deb914596176cf',1,'RedMatrix::RedDAV::RedBrowser']]],
   ['http_5fstatus_5fexit',['http_status_exit',['../include_2network_8php.html#a4cfb2c05a1c295317283d762440ce0b2',1,'network.php']]],
+  ['hub_5fpost_5freturn',['hub_post_return',['../pubsub_8php.html#ad4e82341660e72cb8eaad56aa1e9e945',1,'pubsub.php']]],
+  ['hub_5freturn',['hub_return',['../pubsub_8php.html#a24c84d42f653bdb084726c1e5791eebb',1,'pubsub.php']]],
   ['hubloc_5fchange_5fprimary',['hubloc_change_primary',['../hubloc_8php.html#ad86214b3a74084bd7b54e8d6c919ce4d',1,'hubloc.php']]]
 ];

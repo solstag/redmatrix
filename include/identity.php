@@ -34,7 +34,7 @@ function identity_check_service_class($account_id) {
 
 	$ret['total_identities'] = intval($r[0]['total']);
 
-	if(! service_class_allows($account_id,'total_identities',$r[0]['total'])) {
+	if(! account_service_class_allows($account_id,'total_identities',$r[0]['total'])) {
 		$result['message'] .= upgrade_message();
 		return $result;
 	}
@@ -856,7 +856,8 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 		);
 
 
-		if(feature_enabled(local_user(),'multi_profiles')) {
+		$multi_profiles = feature_enabled(local_user(), 'multi_profiles');
+		if($multi_profiles) {
 			$profile['edit'] = array($a->get_baseurl(). '/profiles', t('Profiles'),"", t('Manage/edit profiles'));
 			$profile['menu']['cr_new'] = t('Create New Profile');
 		}
@@ -869,6 +870,8 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 
 		if($r) {
 			foreach($r as $rr) {
+				if(!($multi_profiles || $rr['is_default']))
+					 continue;
 				$profile['menu']['entries'][] = array(
 					'photo'                => $rr['thumb'],
 					'id'                   => $rr['id'],
@@ -1113,7 +1116,7 @@ logger('online: ' . $profile['online']);
 
 
 function advanced_profile(&$a) {
-
+	require_once('include/text.php');
 	if(! perm_is_allowed($a->profile['profile_uid'],get_observer_hash(),'view_profile'))
 		return '';
 
@@ -1201,7 +1204,6 @@ function advanced_profile(&$a) {
 		if($txt = prepare_text($a->profile['likes'])) $profile['likes'] = array( t('Likes:'), $txt);
 
 		if($txt = prepare_text($a->profile['dislikes'])) $profile['dislikes'] = array( t('Dislikes:'), $txt);
-
 
 		if($txt = prepare_text($a->profile['contact'])) $profile['contact'] = array( t('Contact information and Social Networks:'), $txt);
 

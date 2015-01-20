@@ -119,6 +119,7 @@ function vcard_from_xchan($xchan, $observer = null, $mode = '') {
 		'$name'    => $xchan['xchan_name'],
 		'$photo'   => ((is_array($a->profile) && array_key_exists('photo',$a->profile)) ? $a->profile['photo'] : $xchan['xchan_photo_l']),
 		'$follow'  => $xchan['xchan_addr'],
+		'$link'    => zid($xchan['xchan_url']),
 		'$connect' => $connect,
 		'$newwin'  => (($mode === 'chanview') ? t('New window') : ''),
 		'$newtit'  => t('Open the selected location in a different window or browser tab'),
@@ -207,6 +208,7 @@ function account_remove($account_id,$local = true,$unset_session=true) {
 		intval($account_id)
 	);
 
+
 	if ($unset_session) {
 		unset($_SESSION['authenticated']);
 		unset($_SESSION['uid']);
@@ -215,6 +217,28 @@ function account_remove($account_id,$local = true,$unset_session=true) {
 	}
 	return $r;
 
+}
+// recursively delete a directory
+function rrmdir($path)
+{
+    if (is_dir($path) === true)
+    {
+        $files = array_diff(scandir($path), array('.', '..'));
+
+        foreach ($files as $file)
+        {
+            rrmdir(realpath($path) . '/' . $file);
+        }
+
+        return rmdir($path);
+    }
+
+    else if (is_file($path) === true)
+    {
+        return unlink($path);
+    }
+
+    return false;
 }
 
 function channel_remove($channel_id, $local = true, $unset_session=true) {
@@ -310,6 +334,19 @@ function channel_remove($channel_id, $local = true, $unset_session=true) {
 			intval(XCHAN_FLAGS_DELETED),
 			dbesc($channel['channel_hash'])
 		);
+	}
+	
+	//remove from file system
+   $r = q("select channel_address from channel where channel_id = %d limit 1",
+			intval($channel_id)
+		);
+		if($r)
+			$channel_address = $r[0]['channel_address'] ;
+	if ($channel_address !== '') {	
+	$f = 'store/' . $channel_address.'/';
+	logger ('delete '. $f);
+			if(is_dir($f))
+				@rrmdir($f);
 	}
 
 	proc_run('php','include/directory.php',$channel_id);
@@ -483,6 +520,8 @@ function contact_remove($channel_id, $abook_id) {
 	if((! $channel_id) || (! $abook_id))
 		return false;
 
+	logger('removing contact ' . $abook_id . ' for channel ' . $channel_id,LOGGER_DEBUG);
+
 	$archive = get_pconfig($channel_id, 'system','archive_removed_contacts');
 	if($archive) {
 		q("update abook set abook_flags = ( abook_flags | %d ) where abook_id = %d and abook_channel = %d",
@@ -545,12 +584,30 @@ function contact_remove($channel_id, $abook_id) {
 
 function random_profile() {
 	$randfunc = db_getfunc('rand');
-	$r = q("select xchan_url from xchan left join hubloc on hubloc_hash = xchan_hash where hubloc_connected > %s - interval %s order by $randfunc limit 1",
-		db_utcnow(), db_quoteinterval('30 day')
-	);
-	if($r)
-		return $r[0]['xchan_url'];
+	
+	$checkrandom = get_config('randprofile','check'); // False by default
+	$retryrandom = intval(get_config('randprofile','retry'));
+	if($retryrandom === false) $retryrandom = 5;
+
+	for($i = 0; $i < $retryrandom; $i++) {
+		$r = q("select xchan_url from xchan left join hubloc on hubloc_hash = xchan_hash where hubloc_connected > %s - interval %s order by $randfunc limit 1",
+			db_utcnow(), db_quoteinterval('30 day')
+		);
+
+		if(!$r) return ''; // Couldn't get a random channel
+
+		if($checkrandom) {
+			$x = z_fetch_url($r[0]['xchan_url']);
+			if($x['success'])
+				return $r[0]['xchan_url'];
+			else
+				logger('Random channel turned out to be bad.');
+		}
+		else {
+			return $r[0]['xchan_url'];
+		}
+
+	}
 	return '';
 }
-
 

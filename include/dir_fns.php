@@ -31,33 +31,72 @@ function find_upstream_directory($dirmode) {
 }
 
 function check_upstream_directory() {
+
 	/**
 	* Directories may come and go over time.  We will need to check that our 
 	* directory server is still valid occasionally, and reset to something that
 	* is if our directory has gone offline for any reason
 	*/
+
 	$directory = get_config('system','directory_server');
-	if ($directory) {
-		$r = q("select * from site where site_url = '%s' and (site_flags & %d) > 0 ",
-			dbesc($directory),
-			intval(DIRECTORY_MODE_PRIMARY|DIRECTORY_MODE_SECONDARY|DIRECTORY_MODE_STANDALONE)
-		);
-	}
-	// If we've got something, it's still a directory.  If we haven't, we need to reset and let find_upstream_directory() fix it
-		if (! $r) {
-			set_config('system','directory_server','');
+
+	// it's possible there is no directory server configured and the local hub is being used.
+	// If so, default to preserving the absence of a specific server setting.
+
+	$isadir = true; 
+
+	if($directory) {
+		$h = parse_url($directory);
+		if($h) {
+			$x = zot_finger('sys@' . $h['host']);
+			if($x['success']) {
+				$j = json_decode($x['body'],true);
+				if(array_key_exists('site',$j) && array_key_exists('directory_mode',$j['site'])) {
+					if($j['site']['directory_mode'] === 'normal') {
+						$isadir = false;
+					}
+				}
+			}
 		}
+	}
+
+	if(! $isadir)
+		set_config('system','directory_server','');
 	return;
 }
 	
 function dir_sort_links() {
+	// Build urls without order and pubforums so it's easy to tack on the changed value
+	// Probably there's an easier way to do this
+
+	$current_order = (($_REQUEST['order']) ? $_REQUEST['order'] : 'normal');
+	$url = 'directory?f=';
+
+	$tmp = array_merge($_GET,$_POST);
+	unset($tmp['order']);
+	unset($tmp['q']);
+	unset($tmp['f']);
+	$sorturl = $url . http_build_query($tmp);
+
+	$tmp = array_merge($_GET,$_POST);
+	unset($tmp['pubforums']);
+	unset($tmp['q']);
+	unset($tmp['f']);
+	$forumsurl = $url . http_build_query($tmp);
 
 	$o = replace_macros(get_markup_template('dir_sort_links.tpl'), array(
 		'$header' => t('Directory Options'),
 		'$normal' => t('Alphabetic'),
 		'$reverse' => t('Reverse Alphabetic'),
 		'$date' => t('Newest to Oldest'),
+		'$reversedate' => t('Oldest to Newest'),
 		'$pubforums' => t('Public Forums Only'),
+		'$pubforumsonly' => x($_REQUEST,'pubforums') ? $_REQUEST['pubforums'] : '',
+		'$sort' => t('Sort'),
+		'$selected_sort' => $current_order,
+		'$sorturl' => $sorturl,
+		'$forumsurl' => $forumsurl,
+
 	));
 	return $o;
 }
@@ -213,7 +252,7 @@ function update_directory_entry($ud) {
 
 function local_dir_update($uid,$force) {
 
-	logger('local_dir_update', LOGGER_DEBUG);
+	logger('local_dir_update: uid: ' . $uid, LOGGER_DEBUG);
 
 	$p = q("select channel.channel_hash, channel_address, channel_timezone, profile.* from profile left join channel on channel_id = uid where uid = %d and is_default = 1",
 		intval($uid)

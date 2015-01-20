@@ -107,7 +107,9 @@ function search_content(&$a,$update = 0, $load = false) {
 			'$order' => '',
 			'$file' => '',
 			'$cats' => '',
+			'$tags' => '',
 			'$mid' => '',
+			'$verb' => '',
 			'$dend' => '',
 			'$dbegin' => ''
 		));

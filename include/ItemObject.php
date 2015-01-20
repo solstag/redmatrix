@@ -63,7 +63,7 @@ class Item extends BaseObject {
 	 *      _ false on failure
 	 */
 
-	public function get_template_data($alike, $dlike, $thread_level=1) {
+	public function get_template_data($conv_responses, $thread_level=1) {
 	
 		$result = array();
 
@@ -135,8 +135,8 @@ class Item extends BaseObject {
 
 		$location = format_location($item);
 
-		$like_count = ((x($alike,$item['mid'])) ? $alike[$item['mid']] : '');
-		$like_list = ((x($alike,$item['mid'])) ? $alike[$item['mid'] . '-l'] : '');
+		$like_count = ((x($conv_responses['like'],$item['mid'])) ? $conv_responses['like'][$item['mid']] : '');
+		$like_list = ((x($conv_responses['like'],$item['mid'])) ? $conv_responses['like'][$item['mid'] . '-l'] : '');
 		if (count($like_list) > MAX_LIKERS) {
 			$like_list_part = array_slice($like_list, 0, MAX_LIKERS);
 			array_push($like_list_part, '<a href="#" data-toggle="modal" data-target="#likeModal-' . $this->get_id() . '"><b>' . t('View all') . '</b></a>');
@@ -146,8 +146,8 @@ class Item extends BaseObject {
 		$like_button_label = tt('Like','Likes',$like_count,'noun');
 
 		if (feature_enabled($conv->get_profile_owner(),'dislike')) {
-			$dislike_count = ((x($dlike,$item['mid'])) ? $dlike[$item['mid']] : '');
-			$dislike_list = ((x($dlike,$item['mid'])) ? $dlike[$item['mid'] . '-l'] : '');
+			$dislike_count = ((x($conv_responses['dislike'],$item['mid'])) ? $conv_responses['dislike'][$item['mid']] : '');
+			$dislike_list = ((x($conv_responses['dislike'],$item['mid'])) ? $conv_responses['dislike'][$item['mid'] . '-l'] : '');
 			$dislike_button_label = tt('Dislike','Dislikes',$dislike_count,'noun');
 			if (count($dislike_list) > MAX_LIKERS) {
 				$dislike_list_part = array_slice($dislike_list, 0, MAX_LIKERS);
@@ -157,9 +157,9 @@ class Item extends BaseObject {
 			}
 		}
 
-		$showlike    = ((x($alike,$item['mid'])) ? format_like($alike[$item['mid']],$alike[$item['mid'] . '-l'],'like',$item['mid']) : '');
-		$showdislike = ((x($dlike,$item['mid']) && feature_enabled($conv->get_profile_owner(),'dislike'))  
-				? format_like($dlike[$item['mid']],$dlike[$item['mid'] . '-l'],'dislike',$item['mid']) : '');
+		$showlike    = ((x($conv_responses['like'],$item['mid'])) ? format_like($conv_responses['like'][$item['mid']],$conv_responses['like'][$item['mid'] . '-l'],'like',$item['mid']) : '');
+		$showdislike = ((x($conv_responses['dislike'],$item['mid']) && feature_enabled($conv->get_profile_owner(),'dislike'))  
+				? format_like($conv_responses['dislike'][$item['mid']],$conv_responses['dislike'][$item['mid'] . '-l'],'dislike',$item['mid']) : '');
 
 		/*
 		 * We should avoid doing this all the time, but it depends on the conversation mode
@@ -231,7 +231,14 @@ class Item extends BaseObject {
 
 		localize_item($item);
 		$body = prepare_body($item,true);
-		
+
+		// $viewthread (below) is only valid in list mode. If this is a channel page, build the thread viewing link
+		// since we can't depend on llink or plink pointing to the right local location.
+ 
+		$owner_address = substr($item['owner']['xchan_addr'],0,strpos($item['owner']['xchan_addr'],'@'));
+		$viewthread = $item['llink'];
+		if($conv->get_mode() === 'channel')
+			$viewthread = z_root() . '/channel/' . $owner_address . '?f=&mid=' . $item['mid'];
 
 		$comment_count_txt = sprintf( tt('%d comment','%d comments',$total_children),$total_children );
 		$list_unseen_txt = (($unseen_comments) ? sprintf('%d unseen',$unseen_comments) : '');
@@ -249,6 +256,7 @@ class Item extends BaseObject {
 			'linktitle' => sprintf( t('View %s\'s profile - %s'), $profile_name, $item['author']['xchan_addr']),
 			'olinktitle' => sprintf( t('View %s\'s profile - %s'), $this->get_owner_name(), $item['owner']['xchan_addr']),
 			'llink' => $item['llink'],
+			'viewthread' => $viewthread,
 			'to' => t('to'),
 			'via' => t('via'),
 			'wall' => t('Wall-to-Wall'),
@@ -284,7 +292,7 @@ class Item extends BaseObject {
 			'share'     => $share,
 			'rawmid'	=> $item['mid'],
 			'plink'     => get_plink($item),
-			'edpost'    => ((feature_enabled($conv->get_profile_owner(),'edit_posts')) ? $edpost : ''),
+			'edpost'    => $edpost, // ((feature_enabled($conv->get_profile_owner(),'edit_posts')) ? $edpost : ''),
 			'star'      => ((feature_enabled($conv->get_profile_owner(),'star_posts')) ? $star : ''),
 			'tagger'    => ((feature_enabled($conv->get_profile_owner(),'commtag')) ? $tagger : ''),
 			'filer'     => ((feature_enabled($conv->get_profile_owner(),'filing')) ? $filer : ''),
@@ -328,7 +336,7 @@ class Item extends BaseObject {
 
 		if(($this->get_display_mode() === 'normal') && ($nb_children > 0)) {
 			foreach($children as $child) {
-				$result['children'][] = $child->get_template_data($alike, $dlike, $thread_level + 1);
+				$result['children'][] = $child->get_template_data($conv_responses, $thread_level + 1);
 			}
 			// Collapse
 			if(($nb_children > 2) || ($thread_level > 1)) {
@@ -627,7 +635,7 @@ class Item extends BaseObject {
 			'$edimg' => t('Image'),
 			'$edurl' => t('Link'),
 			'$edvideo' => t('Video'),
-			'$preview' => ((feature_enabled($conv->get_profile_owner(),'preview')) ? t('Preview') : ''),
+			'$preview' => t('Preview'), // ((feature_enabled($conv->get_profile_owner(),'preview')) ? t('Preview') : ''),
 			'$indent' => $indent,
 			'$feature_encrypt' => ((feature_enabled($conv->get_profile_owner(),'content_encrypt')) ? true : false),
 			'$encrypt' => t('Encrypt text'),

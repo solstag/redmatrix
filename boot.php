@@ -27,7 +27,6 @@
  * documented.
  */
 
-
 require_once('include/config.php');
 require_once('include/network.php');
 require_once('include/plugin.php');
@@ -50,14 +49,23 @@ define ( 'RED_PLATFORM',            'redmatrix' );
 define ( 'RED_VERSION',             trim(file_get_contents('version.inc')) . 'R');
 define ( 'ZOT_REVISION',            1     );
 
-define ( 'DB_UPDATE_VERSION',       1131  );
+define ( 'DB_UPDATE_VERSION',       1134  );
 
+/**
+ * Constant with a HTML line break.
+ *
+ * Contains a HTML line break (br) element and a real carriage return with line
+ * feed for the source.
+ * This can be used in HTML and JavaScript where needed a line break.
+ *
+ * @var string
+ */
 define ( 'EOL',                    '<br>' . "\r\n"        );
 define ( 'ATOM_TIME',              'Y-m-d\TH:i:s\Z'       );
 //define ( 'NULL_DATE',              '0000-00-00 00:00:00'  );
 define ( 'TEMPLATE_BUILD_PATH',    'store/[data]/smarty3' );
 
-define ( 'DIRECTORY_MODE_NORMAL',      0x0000);  // This is technically DIRECTORY_MODE_TERTIARY, but it's the default, hence 0x0000
+define ( 'DIRECTORY_MODE_NORMAL',      0x0000); // This is technically DIRECTORY_MODE_TERTIARY, but it's the default, hence 0x0000
 define ( 'DIRECTORY_MODE_PRIMARY',     0x0001);
 define ( 'DIRECTORY_MODE_SECONDARY',   0x0002);
 define ( 'DIRECTORY_MODE_STANDALONE',  0x0100);
@@ -75,7 +83,8 @@ $DIRECTORY_FALLBACK_SERVERS = array(
 	'https://zotid.net', 
 	'https://redmatrix.nl', 
 	'https://red.zottel.red',
-	'https://red.pixelbits.de'
+	'https://red.pixelbits.de',
+	'https://whogotzot.com'
 );
 
 
@@ -212,7 +221,7 @@ define ( 'PAGE_NORMAL',            0x0000 );
 define ( 'PAGE_HIDDEN',            0x0001 );
 define ( 'PAGE_AUTOCONNECT',       0x0002 );
 define ( 'PAGE_APPLICATION',       0x0004 );
-define ( 'PAGE_DIRECTORY_CHANNEL', 0x0008 ); // system channel used for directory synchronisation
+define ( 'PAGE_ALLOWCODE',         0x0008 );
 define ( 'PAGE_PREMIUM',           0x0010 );
 define ( 'PAGE_ADULT',             0x0020 );
 define ( 'PAGE_CENSORED',          0x0040 ); // Site admin has blocked this channel from appearing in casual search results and site feeds
@@ -231,6 +240,8 @@ define ( 'PHOTO_PROFILE',          0x0001 );
 define ( 'PHOTO_XCHAN',            0x0002 );
 define ( 'PHOTO_THING',            0x0004 );
 define ( 'PHOTO_ADULT',            0x0008 );
+
+define ( 'PHOTO_FLAG_OS',          0x4000 );
 
 /**
  * Menu types
@@ -470,6 +481,10 @@ define ( 'NAMESPACE_YMEDIA',          'http://search.yahoo.com/mrss/' );
 
 define ( 'ACTIVITY_LIKE',        NAMESPACE_ACTIVITY_SCHEMA . 'like' );
 define ( 'ACTIVITY_DISLIKE',     NAMESPACE_ZOT   . '/activity/dislike' );
+define ( 'ACTIVITY_AGREE',       NAMESPACE_ZOT   . '/activity/agree' );
+define ( 'ACTIVITY_DISAGREE',    NAMESPACE_ZOT   . '/activity/disagree' );
+define ( 'ACTIVITY_ABSTAIN',     NAMESPACE_ZOT   . '/activity/abstain' );
+
 define ( 'ACTIVITY_OBJ_HEART',   NAMESPACE_ZOT   . '/activity/heart' );
 
 define ( 'ACTIVITY_FRIEND',      NAMESPACE_ACTIVITY_SCHEMA . 'make-friend' );
@@ -486,6 +501,7 @@ define ( 'ACTIVITY_FAVORITE',    NAMESPACE_ACTIVITY_SCHEMA . 'favorite' );
 
 define ( 'ACTIVITY_POKE',        NAMESPACE_ZOT . '/activity/poke' );
 define ( 'ACTIVITY_MOOD',        NAMESPACE_ZOT . '/activity/mood' );
+define ( 'ACTIVITY_FILE',        NAMESPACE_ZOT . '/activity/file' );
 
 define ( 'ACTIVITY_OBJ_COMMENT', NAMESPACE_ACTIVITY_SCHEMA . 'comment' );
 define ( 'ACTIVITY_OBJ_NOTE',    NAMESPACE_ACTIVITY_SCHEMA . 'note' );
@@ -498,6 +514,7 @@ define ( 'ACTIVITY_OBJ_GROUP',   NAMESPACE_ACTIVITY_SCHEMA . 'group' );
 define ( 'ACTIVITY_OBJ_TAGTERM', NAMESPACE_ZOT  . '/activity/tagterm' );
 define ( 'ACTIVITY_OBJ_PROFILE', NAMESPACE_ZOT  . '/activity/profile' );
 define ( 'ACTIVITY_OBJ_THING',   NAMESPACE_ZOT  . '/activity/thing' );
+define ( 'ACTIVITY_OBJ_LOCATION',NAMESPACE_ZOT  . '/activity/location' );
 
 /**
  * item weight for query ordering
@@ -543,7 +560,7 @@ define ( 'ITEM_DELAYED_PUBLISH', 0x0080);
 define ( 'ITEM_BUILDBLOCK',      0x0100);	// Named thusly to make sure nobody confuses this with ITEM_BLOCKED
 define ( 'ITEM_PDL',			 0x0200);	// Page Description Language - e.g. Comanche
 define ( 'ITEM_BUG',			 0x0400);	// Is a bug, can be used by the internal bug tracker
-define ( 'ITEM_PENDING_REMOVE',  0x0800);  // deleted, notification period has lapsed
+define ( 'ITEM_PENDING_REMOVE',  0x0800);   // deleted, notification period has lapsed
 
 /**
  * Item Flags
@@ -553,7 +570,7 @@ define ( 'ITEM_ORIGIN',          0x0001);
 define ( 'ITEM_UNSEEN',          0x0002);
 define ( 'ITEM_STARRED',         0x0004);
 define ( 'ITEM_UPLINK',          0x0008);
-define ( 'ITEM_UPLINK_PRV',      0x0010);
+define ( 'ITEM_CONSENSUS',       0x0010);  // an item which may present agree/disagree/abstain options
 define ( 'ITEM_WALL',            0x0020);
 define ( 'ITEM_THREAD_TOP',      0x0040);
 define ( 'ITEM_NOTSHOWN',        0x0080);  // technically visible but not normally shown (e.g. like/dislike)
@@ -569,7 +586,7 @@ define ( 'ITEM_RSS',             0x8000);  // Item comes from a feed. Use this t
 
 define ( 'DBTYPE_MYSQL',    0 );
 define ( 'DBTYPE_POSTGRES', 1 );
-										   
+
 /**
  *
  * Reverse the effect of magic_quotes_gpc if it is enabled.
@@ -613,10 +630,10 @@ function startup() {
 }
 
 /**
- *
  * class: App
  *
- * Our main application structure for the life of this page
+ * @brief Our main application structure for the life of this page.
+ *
  * Primarily deals with the URL that got us here
  * and tries to make some sense of it, and
  * stores our page contents and config storage
@@ -682,11 +699,15 @@ class App {
 	public  $force_max_items = 0;
 	public  $theme_thread_allow = true;
 
-	// An array for all theme-controllable parameters
-	// Mostly unimplemented yet. Only options 'template_engine' and
-	// beyond are used.
-
-	private	$theme = array(
+	/**
+	 * @brief An array for all theme-controllable parameters
+	 *
+	 * Mostly unimplemented yet. Only options 'template_engine' and
+	 * beyond are used.
+	 *
+	 * @var array
+	 */
+	private $theme = array(
 		'sourcename' => '',
 		'videowidth' => 425,
 		'videoheight' => 350,
@@ -696,9 +717,17 @@ class App {
 		'template_engine' => 'smarty3',
 	);
 
-	// array of registered template engines ('name'=>'class name')
+	/**
+	 * array of registered template engines ('name'=>'class name')
+	 *
+	 * @var array
+	 */
 	public $template_engines = array();
-	// array of instanced template engines ('name'=>'instance')
+	/**
+	 * array of instanced template engines ('name'=>'instance')
+	 *
+	 * @var array
+	 */
 	public $template_engine_instance = array();
 
 	private $ldelim = array(
@@ -715,7 +744,9 @@ class App {
 	private $baseurl;
 	private $path;
 
-
+	/**
+	 * App constructor.
+	 */
 	function __construct() {
 		// we'll reset this after we read our config file
 		date_default_timezone_set('UTC');
@@ -758,8 +789,8 @@ class App {
 
 		set_include_path("include/$this->hostname" . PATH_SEPARATOR . get_include_path());
 
-		if((x($_SERVER,'QUERY_STRING')) && substr($_SERVER['QUERY_STRING'],0,2) === "q=") {
-			$this->query_string = substr($_SERVER['QUERY_STRING'],2);
+		if((x($_SERVER,'QUERY_STRING')) && substr($_SERVER['QUERY_STRING'], 0, 2) === "q=") {
+			$this->query_string = substr($_SERVER['QUERY_STRING'], 2);
 			// removing trailing / - maybe a nginx problem
 			if (substr($this->query_string, 0, 1) == "/")
 				$this->query_string = substr($this->query_string, 1);
@@ -769,8 +800,8 @@ class App {
 
 		// unix style "homedir"
 
-		if(substr($this->cmd,0,1) === '~')
-			$this->cmd = 'channel/' . substr($this->cmd,1);
+		if(substr($this->cmd, 0, 1) === '~')
+			$this->cmd = 'channel/' . substr($this->cmd, 1);
 
 
 		/**
@@ -854,7 +885,6 @@ class App {
 	}
 
 	function set_baseurl($url) {
-
 		if(is_array($this->config)
 			&& array_key_exists('system',$this->config)
 			&& is_array($this->config['system'])
@@ -887,7 +917,7 @@ class App {
 	}
 
 	function set_path($p) {
-		$this->path = trim(trim($p),'/');
+		$this->path = trim(trim($p), '/');
 	}
 
 	function get_path() {
@@ -1000,6 +1030,7 @@ class App {
 			'$head_js' => head_get_js(),
 			'$js_strings' => js_strings(),
 			'$zid' => get_my_address(),
+			'$channel_id' => $this->profile['uid'],
 		)) . $this->page['htmlhead'];
 
 		// always put main.js at the end
@@ -1029,6 +1060,7 @@ class App {
 	* return engine defined by theme, or default
 	*
 	* @param string $name Template engine name
+	*
 	* @return object Template Engine instance
 	*/
 	function template_engine($name = ''){
@@ -1055,6 +1087,11 @@ class App {
 		echo "template engine <tt>$template_engine</tt> is not registered!\n"; killme();
 	}
 
+	/**
+	 * @brief Returns the active template engine.
+	 *
+	 * @return string
+	 */
 	function get_template_engine() {
 		return $this->theme['template_engine'];
 	}
@@ -1096,9 +1133,13 @@ class App {
 } // End App class
 
 
-// retrieve the App structure
-// useful in functions which require it but don't get it passed to them
-
+/**
+ * @brief Retrieve the App structure.
+ *
+ * Useful in functions which require it but don't get it passed to them
+ *
+ * @return App
+ */
 function get_app() {
 	global $a;
 	return $a;
@@ -1116,7 +1157,8 @@ function get_app() {
  *
  * @param string|array $s variable to check
  * @param string $k key inside the array to check
- * @return bool
+ *
+ * @return bool|int
  */
 function x($s, $k = null) {
 	if($k != null) {
@@ -1166,24 +1208,43 @@ function z_path() {
 	return $base;
 }
 
+/**
+ * @brief Returns the baseurl.
+ *
+ * @see App::get_baseurl()
+ *
+ * @return string
+ */
 function z_root() {
 	global $a;
 	return $a->get_baseurl();
 }
 
+/**
+ * @brief Return absolut URL for given $path.
+ *
+ * @param string $path
+ *
+ * @return string
+ */
 function absurl($path) {
-	if(strpos($path,'/') === 0)
+	if(strpos($path, '/') === 0)
 		return z_path() . $path;
 
 	return $path;
 }
 
-function os_mkdir($path,$mode = 0777,$recursive = false) {
+function os_mkdir($path, $mode = 0777, $recursive = false) {
 	$oldumask = @umask(0);
 	@mkdir($path, $mode, $recursive);
 	@umask($oldumask); 
 }
 
+/**
+ * @brief Function to check if request was an AJAX (xmlhttprequest) request.
+ *
+ * @return boolean
+ */
 function is_ajax() {
 	return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
 }
@@ -1331,11 +1392,11 @@ function check_config(&$a) {
 	else
 		$installed = array();
 
-	$plugins = get_config('system','addon');
+	$plugins = get_config('system', 'addon');
 	$plugins_arr = array();
 
 	if($plugins)
-		$plugins_arr = explode(',',str_replace(' ', '',$plugins));
+		$plugins_arr = explode(',', str_replace(' ', '', $plugins));
 
 	$a->plugins = $plugins_arr;
 
@@ -1343,7 +1404,7 @@ function check_config(&$a) {
 
 	if(count($installed)) {
 		foreach($installed as $i) {
-			if(! in_array($i['name'],$plugins_arr)) {
+			if(! in_array($i['name'], $plugins_arr)) {
 				unload_plugin($i['name']);
 			}
 			else {
@@ -1354,7 +1415,7 @@ function check_config(&$a) {
 
 	if(count($plugins_arr)) {
 		foreach($plugins_arr as $p) {
-			if(! in_array($p,$installed_arr)) {
+			if(! in_array($p, $installed_arr)) {
 				load_plugin($p);
 			}
 		}
@@ -1364,7 +1425,7 @@ function check_config(&$a) {
 }
 
 
-function fix_system_urls($oldurl,$newurl) {
+function fix_system_urls($oldurl, $newurl) {
 
 	require_once('include/crypto.php');
 
@@ -1455,7 +1516,7 @@ function login($register = false, $form_id = 'main-login', $hiddens=false) {
 	$a = get_app();
 	$o = '';
 	$reg = false;
-	$reglink = get_config('system','register_link');
+	$reglink = get_config('system', 'register_link');
 	if(! strlen($reglink))
 		$reglink = 'register';
 
@@ -1471,9 +1532,11 @@ function login($register = false, $form_id = 'main-login', $hiddens=false) {
 		$tpl = get_markup_template("logout.tpl");
 	}
 	else {
-		$a->page['htmlhead'] .= replace_macros(get_markup_template("login_head.tpl"),array(
-			'$baseurl' => $a->get_baseurl(true)
-		));
+//	There's no such thing as login_head.tpl, has never been in Red, removed from Friendica 1 Jun 2013...
+
+//		$a->page['htmlhead'] .= replace_macros(get_markup_template("login_head.tpl"), array(
+//			'$baseurl' => $a->get_baseurl(true)
+//		));
 
 		$tpl = get_markup_template("login.tpl");
 		if(strlen($a->query_string))
@@ -1500,16 +1563,17 @@ function login($register = false, $form_id = 'main-login', $hiddens=false) {
 }
 
 
-// Used to end the current process, after saving session state.
-
+/**
+ * @brief Used to end the current process, after saving session state.
+ */
 function killme() {
 	session_write_close();
 	exit;
 }
 
-
-// redirect to another URL and terminate this process.
-
+/**
+ * @brief Redirect to another URL and terminate this process.
+ */
 function goaway($s) {
 	header("Location: $s");
 	killme();
@@ -1531,7 +1595,7 @@ function get_account_id() {
 }
 
 /**
- * @brief Returns the entity id of locally logged in user or false.
+ * @brief Returns the entity id (channel_id) of locally logged in user or false.
  *
  * Returns authenticated numeric channel_id if authenticated and connected to
  * a channel or 0. Sometimes referred to as $uid in the code.
@@ -1545,22 +1609,28 @@ function local_user() {
 	return false;
 }
 
-
-// Returns contact id of authenticated site visitor or false
-
+/**
+ * @brief Returns contact id (visitor_id) of authenticated site visitor or false.
+ *
+ * @return int|bool visitor_id or false
+ */
 function remote_user() {
-	if((x($_SESSION,'authenticated')) && (x($_SESSION,'visitor_id')))
+	if((x($_SESSION, 'authenticated')) && (x($_SESSION, 'visitor_id')))
 		return $_SESSION['visitor_id'];
+
 	return false;
 }
 
-
-// contents of $s are displayed prominently on the page the next time
-// a page is loaded. Usually used for errors or alerts.
-
+/**
+ * Contents of $s are displayed prominently on the page the next time
+ * a page is loaded. Usually used for errors or alerts.
+ *
+ * @param string $s Text to display
+ */
 function notice($s) {
 	$a = get_app();
 	if(! x($_SESSION, 'sysmsg')) $_SESSION['sysmsg'] = array();
+
 	if($a->interactive) {
 		// shameless plug, permission is denied and they have no identity.
 		// There's a fairly good chance that they've not got zot.
@@ -1571,7 +1641,13 @@ function notice($s) {
 	}
 }
 
-
+/**
+ * Contents of $s are displayed prominently on the page the next time a page is
+ * loaded. Usually used for information.
+ * For error and alerts use notice().
+ *
+ * @param string $s Text to display
+ */
 function info($s) {
 	$a = get_app();
 	if(! x($_SESSION, 'sysmsg_info')) $_SESSION['sysmsg_info'] = array();
@@ -1735,13 +1811,19 @@ function current_theme(){
 
 
 /**
- * Return full URL to theme which is currently in effect.
+ * @brief Return full URL to theme which is currently in effect.
+ *
  * Provide a sane default if nothing is chosen or the specified theme does not exist.
+ *
+ * @param bool $installing default false
+ *
+ * @return string
  */
-
 function current_theme_url($installing = false) {
 	global $a;
+
 	$t = current_theme();
+
 	$opts = '';
 	$opts = (($a->profile_uid) ? '?f=&puid=' . $a->profile_uid : '');
 	$opts .= ((x($a->layout,'schema')) ? '&schema=' . $a->layout['schema'] : '');
@@ -1760,10 +1842,12 @@ function current_theme_url($installing = false) {
  */
 function is_site_admin() {
 	$a = get_app();
+
 	if((intval($_SESSION['authenticated']))
 		&& (is_array($a->account))
 		&& ($a->account['account_roles'] & ACCOUNT_ROLE_ADMIN))
 		return true;
+
 	return false;
 }
 
@@ -1815,6 +1899,7 @@ function load_contact_links($uid) {
  *
  * @param array $params mapped array with query parameters
  * @param string $name of parameter, default null
+ *
  * @return string
  */
 function build_querystring($params, $name = null) {
@@ -1856,6 +1941,11 @@ function dba_timer() {
 	return microtime(true);
 }
 
+/**
+ * @brief Returns xchan_hash from the observer.
+ *
+ * @return string Empty if no observer, otherwise xchan_hash from observer
+ */
 function get_observer_hash() {
 	$observer = get_app()->get_observer();
 	if(is_array($observer))
@@ -1891,6 +1981,7 @@ function curPageURL() {
  *
  * @param App $a global application object
  * @param string $navname
+ *
  * @return mixed
  */
 function get_custom_nav(&$a, $navname) {
@@ -2042,12 +2133,20 @@ function construct_page(&$a) {
 	);
 }
 
-
+/**
+ * @brief Returns RedMatrix's root directory.
+ *
+ * @return string
+ */
 function appdirpath() {
 	return dirname(__FILE__);
 }
 
-
+/**
+ * @brief Set a pageicon.
+ *
+ * @param string $icon
+ */
 function head_set_icon($icon) {
 	global $a;
 
@@ -2055,6 +2154,11 @@ function head_set_icon($icon) {
 //	logger('head_set_icon: ' . $icon);
 }
 
+/**
+ * @brief Get the pageicon.
+ *
+ * @return string absolut path to pageicon
+ */
 function head_get_icon() {
 	global $a;
 
@@ -2065,9 +2169,40 @@ function head_get_icon() {
 	return $icon;
 }
 
+/**
+ * @brief Return the Realm of the directory.
+ *
+ * @return string
+ */
 function get_directory_realm() {
 	if($x = get_config('system', 'directory_realm'))
 		return $x;
 
 	return DIRECTORY_REALM;
+}
+
+
+/**
+ * @brief return relative date of last completed poller execution
+ */
+
+function get_poller_runtime() {
+	$t = get_config('system','lastpoll');
+	return relative_date($t);
+}
+
+function z_get_upload_dir() {
+	$upload_dir = get_config('system','uploaddir');
+	if(! $upload_dir)
+		$upload_dir = ini_get('upload_tmp_dir');
+	if(! $upload_dir)
+		$upload_dir = sys_get_temp_dir();
+	return $upload_dir;
+}
+
+function z_get_temp_dir() {
+	$temp_dir = get_config('system','tempdir');
+	if(! $temp_dir)
+		$temp_dir = sys_get_temp_dir();
+	return $upload_dir;
 }

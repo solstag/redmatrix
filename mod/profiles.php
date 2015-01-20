@@ -11,7 +11,7 @@ function profiles_init(&$a) {
 
 	if((argc() > 2) && (argv(1) === "drop") && intval(argv(2))) {
 		$r = q("SELECT * FROM `profile` WHERE `id` = %d AND `uid` = %d AND `is_default` = 0 LIMIT 1",
-			intval($a->argv[2]),
+			intval(argv(2)),
 			intval(local_user())
 		);
 		if(! count($r)) {
@@ -156,9 +156,18 @@ function profiles_init(&$a) {
 
 	// Run profile_load() here to make sure the theme is set before
 	// we start loading content
-	if((argc() > 1) && (intval(argv(1)))) {
+	if(((argc() > 1) && (intval(argv(1)))) || !feature_enabled(local_user(),'multi_profiles')) {
+		if(feature_enabled(local_user(),'multi_profiles'))
+			$id = $a->argv[1];
+		else {
+			$x = q("select id from profile where uid = %d and is_default = 1",
+				intval(local_user())
+			);
+			if($x)
+				$id = $x[0]['id'];
+		}
 		$r = q("SELECT * FROM `profile` WHERE `id` = %d AND `uid` = %d LIMIT 1",
-			intval($a->argv[1]),
+			intval($id),
 			intval(local_user())
 		);
 		if(! count($r)) {
@@ -287,7 +296,24 @@ function profiles_post(&$a) {
 		$work         = fix_mce_lf(escape_tags(trim($_POST['work'])));
 		$education    = fix_mce_lf(escape_tags(trim($_POST['education'])));
 
-		$hide_friends = (($_POST['hide_friends'] == 1) ? 1: 0);
+		$hide_friends = ((intval($_POST['hide_friends'])) ? 1: 0);
+
+		require_once('include/text.php');
+		linkify_tags($a, $likes, local_user());
+		linkify_tags($a, $dislikes, local_user());
+		linkify_tags($a, $about, local_user());
+		linkify_tags($a, $interest, local_user());
+		linkify_tags($a, $interest, local_user());
+		linkify_tags($a, $contact, local_user());
+		linkify_tags($a, $channels, local_user());
+		linkify_tags($a, $music, local_user());
+		linkify_tags($a, $book, local_user());
+		linkify_tags($a, $tv, local_user());
+		linkify_tags($a, $film, local_user());
+		linkify_tags($a, $romance, local_user());
+		linkify_tags($a, $work, local_user());
+		linkify_tags($a, $education, local_user());
+
 
 		$with         = ((x($_POST,'with')) ? escape_tags(trim($_POST['with'])) : '');
 
@@ -556,9 +582,18 @@ function profiles_content(&$a) {
 	$profile_fields_basic    = get_profile_fields_basic();
 	$profile_fields_advanced = get_profile_fields_advanced();
 
-	if((argc() > 1) && (intval(argv(1)))) {
+	if(((argc() > 1) && (intval(argv(1)))) || !feature_enabled(local_user(),'multi_profiles')) {
+		if(feature_enabled(local_user(),'multi_profiles'))
+			$id = $a->argv[1];
+		else {
+			$x = q("select id from profile where uid = %d and is_default = 1",
+				intval(local_user())
+			);
+			if($x)
+				$id = $x[0]['id'];
+		}		
 		$r = q("SELECT * FROM `profile` WHERE `id` = %d AND `uid` = %d LIMIT 1",
-			intval($a->argv[1]),
+			intval($id),
 			intval(local_user())
 		);
 		if(! count($r)) {
@@ -585,14 +620,13 @@ function profiles_content(&$a) {
 			$fields = $profile_fields_basic;
 
 
-		$opt_tpl = get_markup_template("profile-hide_friends.tpl");
-		$hide_friends = replace_macros($opt_tpl,array(
-			'$desc'         => t('Hide your contact/friend list from viewers of this profile?'),
-			'$yes_str'      => t('Yes'),
-			'$no_str'       => t('No'),
-			'$yes_selected' => (($r[0]['hide_friends']) ? " checked=\"checked\" " : ""),
-			'$no_selected'  => (($r[0]['hide_friends'] == 0) ? " checked=\"checked\" " : "")
-		));
+		$opt_tpl = get_markup_template("profile_hide_friends.tpl");
+		$hide_friends = replace_macros($opt_tpl,array('$field' => array(
+                       'hide_friends',
+                       t('Hide your contact/friend list from viewers of this profile?'),
+                       $r[0]['hide_friends'],
+                       '',
+               )));
 
 		$q = q("select * from profdef where true");
 		if($q) {
@@ -611,7 +645,7 @@ function profiles_content(&$a) {
 			}
 		}
 
-logger('extra_fields: ' . print_r($extra_fields,true));
+//logger('extra_fields: ' . print_r($extra_fields,true));
 
 		$f = get_config('system','birthday_input_format');
 		if(! $f)
