@@ -7,6 +7,7 @@ CREATE TABLE "abook" (
   "abook_their_perms" bigint NOT NULL DEFAULT '0',
   "abook_closeness" numeric(3)  NOT NULL DEFAULT '99',
   "abook_rating" bigint NOT NULL DEFAULT '0',
+  "abook_rating_text" TEXT NOT NULL DEFAULT '',
   "abook_created" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
   "abook_updated" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
   "abook_connected" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
@@ -1142,13 +1143,16 @@ CREATE TABLE "xlink" (
   "xlink_xchan" text NOT NULL DEFAULT '',
   "xlink_link" text NOT NULL DEFAULT '',
   "xlink_rating" bigint NOT NULL DEFAULT '0',
+  "xlink_rating_text" TEXT NOT NULL DEFAULT '',
   "xlink_updated" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
+  "xlink_static" numeric(1) NOT NULL DEFAULT '0',
   PRIMARY KEY ("xlink_id")
 );
 create index "xlink_xchan" on xlink ("xlink_xchan");
 create index "xlink_link" on xlink ("xlink_link");
 create index "xlink_updated" on xlink ("xlink_updated");
 create index "xlink_rating" on xlink ("xlink_rating");
+create index "xlink_static" on xlink ("xlink_static");
 CREATE TABLE "xperm" (
   "xp_id" serial NOT NULL,
   "xp_client" varchar( 20 ) NOT NULL DEFAULT '',

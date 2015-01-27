@@ -160,7 +160,7 @@ function poller_run($argv, $argc){
 
 			// get rid of really old poco records
 
-			q("delete from xlink where xlink_updated < %s - INTERVAL %s",
+			q("delete from xlink where xlink_updated < %s - INTERVAL %s and xlink_static = 0 ",
 				db_utcnow(), db_quoteinterval('14 DAY')
 			);
 
@@ -389,7 +389,7 @@ function poller_run($argv, $argc){
 	}
 
 	if($dirmode == DIRECTORY_MODE_SECONDARY || $dirmode == DIRECTORY_MODE_PRIMARY) {
-		$r = q("SELECT u.ud_addr, u.ud_id, u.ud_last FROM updates AS u INNER JOIN (SELECT ud_addr, max(ud_last) AS ud_last FROM updates WHERE ( ud_flags & %d ) = 0 AND ud_addr != '' AND ( ud_last = '%s' OR ud_last > %s - INTERVAL %s ) GROUP BY ud_addr) AS s ON s.ud_addr = u.ud_addr AND s.ud_last = u.ud_last ",
+		$r = q("SELECT u.ud_addr, u.ud_id, u.ud_last FROM updates AS u INNER JOIN (SELECT ud_addr, max(ud_id) AS ud_id FROM updates WHERE ( ud_flags & %d ) = 0 AND ud_addr != '' AND ( ud_last = '%s' OR ud_last > %s - INTERVAL %s ) GROUP BY ud_addr) AS s ON s.ud_id = u.ud_id ",
 			intval(UPDATE_FLAGS_UPDATED),
 			dbesc(NULL_DATE),
 			db_utcnow(), db_quoteinterval('7 DAY')

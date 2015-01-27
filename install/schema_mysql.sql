@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `abook` (
   `abook_their_perms` int(11) NOT NULL DEFAULT '0',
   `abook_closeness` tinyint(3) unsigned NOT NULL DEFAULT '99',
   `abook_rating` int(11) NOT NULL DEFAULT '0',
+  `abook_rating_text` TEXT NOT NULL DEFAULT '',
   `abook_created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `abook_updated` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `abook_connected` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -1529,12 +1530,15 @@ CREATE TABLE IF NOT EXISTS `xlink` (
   `xlink_xchan` char(255) NOT NULL DEFAULT '',
   `xlink_link` char(255) NOT NULL DEFAULT '',
   `xlink_rating` int(11) NOT NULL DEFAULT '0',
+  `xlink_rating_text` TEXT NOT NULL DEFAULT '',
   `xlink_updated` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `xlink_static` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`xlink_id`),
   KEY `xlink_xchan` (`xlink_xchan`),
   KEY `xlink_link` (`xlink_link`),
   KEY `xlink_updated` (`xlink_updated`),
-  KEY `xlink_rating` (`xlink_rating`)
+  KEY `xlink_rating` (`xlink_rating`),
+  KEY `xlink_static` (`xlink_static`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
