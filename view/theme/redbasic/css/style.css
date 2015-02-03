@@ -2073,9 +2073,16 @@ nav .dropdown-menu>li>a:hover,nav .dropdown-menu>li>a:focus{
 	border-bottom-right-radius: $radiuspx;
 }
 
-[id^="cloud-index-"]:hover,
+[id^="cloud-index-"]:hover td,
 .cloud-index-active {
 	background-color: $item_colour;
+}
+
+nav ul li .undefined, 
+nav ul li .notify-seen,
+nav ul li .notify-unseen
+ {
+    max-height: 3rem;
 }
 
 /* bootstrap overrides */

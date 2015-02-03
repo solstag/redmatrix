@@ -24,7 +24,7 @@ function acl_init(&$a){
 		$search = $_REQUEST['query'];
 	}
 
-	if(!(local_user()))
+	if(!(local_channel()))
 		if(!($type == 'x' || $type == 'c'))
 			killme();
 
@@ -33,7 +33,7 @@ function acl_init(&$a){
 		$sql_extra2 = "AND ( xchan_name LIKE " . protect_sprintf( "'%" . dbesc($search) . "%'" ) . " OR xchan_addr LIKE " . protect_sprintf( "'%" . dbesc($search) . ((strpos($search,'@') === false) ? "%@%'"  : "%'")) . ") ";
 
 		// This horrible mess is needed because position also returns 0 if nothing is found. W/ould be MUCH easier if it instead returned a very large value
-		// Otherwise we could just order by LEAST(POSTION($search IN xchan_name),POSITION($search IN xchan_addr)).
+		// Otherwise we could just order by LEAST(POSITION($search IN xchan_name),POSITION($search IN xchan_addr)).
 		$order_extra2 = "CASE WHEN xchan_name LIKE " . protect_sprintf( "'%" . dbesc($search) . "%'" ) ." then POSITION('".dbesc($search)."' IN xchan_name) else position('".dbesc($search)."' IN xchan_addr) end, ";
 		$col = ((strpos($search,'@') !== false) ? 'xchan_addr' : 'xchan_name' );
 		$sql_extra3 = "AND $col like " . protect_sprintf( "'%" . dbesc($search) . "%'" ) . " ";
@@ -58,7 +58,7 @@ function acl_init(&$a){
 				ORDER BY `groups`.`name` 
 				LIMIT %d OFFSET %d",
 			db_concat('group_member.xchan', ','),
-			intval(local_user()),
+			intval(local_channel()),
 			intval($count),
 			intval($start)
 		);
@@ -88,14 +88,14 @@ function acl_init(&$a){
 		$extra_channels_sql = substr($extra_channels_sql,1); // Remove initial comma
 
 		// Getting info from the abook is better for local users because it contains info about permissions
-		if(local_user()) {
+		if(local_channel()) {
 			if($extra_channels_sql != '')
 				$extra_channels_sql = " OR (abook_channel IN ($extra_channels_sql)) and not (abook_flags & ". intval(ABOOK_FLAG_HIDDEN) . ') > 0';
 
 			$r = q("SELECT abook_id as id, xchan_hash as hash, xchan_name as name, xchan_photo_s as micro, xchan_url as url, xchan_addr as nick, abook_their_perms, abook_flags 
 				FROM abook left join xchan on abook_xchan = xchan_hash 
 				WHERE (abook_channel = %d $extra_channels_sql) AND not ( abook_flags & %d )>0 and not (xchan_flags & %d )>0 $sql_extra2 order by $order_extra2 xchan_name asc" ,
-				intval(local_user()),
+				intval(local_channel()),
 				intval(ABOOK_FLAG_BLOCKED|ABOOK_FLAG_PENDING|ABOOK_FLAG_ARCHIVED),
 				intval(XCHAN_FLAGS_DELETED)
 			);
@@ -147,7 +147,7 @@ function acl_init(&$a){
 				});
 			}
 		}
-		if(intval(get_config('system','taganyone')) || intval(get_pconfig(local_user(),'system','taganyone'))) {
+		if(intval(get_config('system','taganyone')) || intval(get_pconfig(local_channel(),'system','taganyone'))) {
 			if((! $r) && $type == 'c') {
 				$r = q("SELECT substr(xchan_hash,1,18) as id, xchan_hash as hash, xchan_name as name, xchan_photo_s as micro, xchan_url as url, xchan_addr as nick, 0 as abook_their_perms, 0 as abook_flags 
 					FROM xchan 
@@ -165,21 +165,23 @@ function acl_init(&$a){
 			and not (xchan_flags & %d)>0
 			$sql_extra3
 			ORDER BY `xchan_name` ASC ",
-			intval(local_user()),
+			intval(local_channel()),
 			intval(PERMS_W_MAIL),
 			intval(XCHAN_FLAGS_DELETED)
 		);
 	}
 	elseif(($type == 'a') || ($type == 'p')) {
+
 		$r = q("SELECT abook_id as id, xchan_name as name, xchan_hash as hash, xchan_addr as nick, xchan_photo_s as micro, xchan_network as network, xchan_url as url, xchan_addr as attag , abook_their_perms FROM abook left join xchan on abook_xchan = xchan_hash
 			WHERE abook_channel = %d
 			and not (xchan_flags & %d)>0
 			$sql_extra3
 			ORDER BY xchan_name ASC ",
-			intval(local_user()),
+			intval(local_channel()),
 			intval(XCHAN_FLAGS_DELETED)
 
 		);
+
 	}
 	elseif($type == 'x') {
 		$r = navbar_complete($a);
@@ -209,7 +211,7 @@ function acl_init(&$a){
 		foreach($r as $g){
 
 			// remove RSS feeds from ACLs - they are inaccessible
-			if(strpos($g['hash'],'/'))
+			if(strpos($g['hash'],'/') && $type != 'a')
 				continue;
 
 			if(($g['abook_their_perms'] & PERMS_W_TAGWALL) && $type == 'c' && (! $noforums)) {
@@ -233,7 +235,7 @@ function acl_init(&$a){
 				"id"	   => $g['id'],
 				"xid"      => $g['hash'],
 				"link"     => $g['nick'],
-				"nick"     => substr($g['nick'],0,strpos($g['nick'],'@')),
+				"nick"     => (($g['nick']) ? substr($g['nick'],0,strpos($g['nick'],'@')) : t('RSS')),
 				"self"     => (($g['abook_flags'] & ABOOK_FLAG_SELF) ? 'abook-self' : ''),
 				"taggable" => '',
 				"label"    => '',
@@ -248,6 +250,8 @@ function acl_init(&$a){
 		'count'	=> $count,
 		'items'	=> $items,
 	);
+
+
 	
 	echo json_encode($o);
 
@@ -259,7 +263,7 @@ function navbar_complete(&$a) {
 
 //	logger('navbar_complete');
 
-	if((get_config('system','block_public')) && (! local_user()) && (! remote_user())) {
+	if((get_config('system','block_public')) && (! local_channel()) && (! remote_channel())) {
 		return;
 	}
 

@@ -298,15 +298,24 @@ function zot_refresh($them,$channel = null, $force = false) {
 	if($channel)
 		logger('zot_refresh: channel: ' . print_r($channel,true), LOGGER_DATA);
 
+	$url = null;
+
 	if($them['hubloc_url'])
 		$url = $them['hubloc_url'];
 	else {
-		$r = q("select hubloc_url from hubloc where hubloc_hash = '%s' and ( hubloc_flags & %d ) > 0 limit 1",
-			dbesc($them['xchan_hash']),
-			intval(HUBLOC_FLAGS_PRIMARY)
+		$r = q("select hubloc_url, hubloc_flags from hubloc where hubloc_hash = '%s'",
+			dbesc($them['xchan_hash'])
 		);
-		if($r)
-			$url = $r[0]['hubloc_url'];
+		if($r) {
+			foreach($r as $rr) {
+				if($rr['hubloc_flags'] & HUBLOC_FLAGS_PRIMARY) {
+					$url = $rr['hubloc_url'];
+					break;
+				}
+			}
+			if(! $url)			
+				$url = $r[0]['hubloc_url'];
+		}
 	}
 	if(! $url) {
 		logger('zot_refresh: no url');
@@ -1485,7 +1494,7 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 			// As a side effect we will also do a preliminary check that we have the top-level-post, otherwise
 			// processing it is pointless. 
 
-			$r = q("select route from item where mid = '%s' and uid = %d limit 1",
+			$r = q("select route, id from item where mid = '%s' and uid = %d limit 1",
 				dbesc($arr['parent_mid']),
 				intval($channel['channel_id'])
 			);
@@ -1522,14 +1531,37 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 
 				// going downstream check that we have the same upstream provider that
 				// sent it to us originally. Ignore it if it came from another source
-				// (with potentially different permissions)
+				// (with potentially different permissions).
+				// only compare the last hop since it could have arrived at the last location any number of ways.
+				// Always accept empty routes and firehose items (route contains 'undefined') . 
+
+				$existing_route = explode(',', $r[0]['route']);
+				$routes = count($existing_route);
+				if($routes) {
+					$last_hop = array_pop($existing_route);
+					$last_prior_route = implode(',',$existing_route);
+				}
+				else {
+					$last_hop = '';
+					$last_prior_route = '';
+				}
+				
+				if(in_array('undefined',$existing_route) || $last_hop == 'undefined' || $sender['hash'] == 'undefined')
+					$last_hop = '';
 
 				$current_route = (($arr['route']) ? $arr['route'] . ',' : '') . $sender['hash'];
 
-				if($r[0]['route'] != $current_route) {
+				if($last_hop && $last_hop != $sender['hash']) {
+					logger('comment route mismatch: parent route = ' . $r[0]['route'] . ' expected = ' . $current_route, LOGGER_DEBUG);
+					logger('comment route mismatch: parent msg = ' . $r[0]['id'],LOGGER_DEBUG);
 					$result[] = array($d['hash'],'comment route mismatch',$channel['channel_name'] . ' <' . $channel['channel_address'] . '@' . get_app()->get_hostname() . '>',$arr['mid']);
 					continue;
 				}
+
+				// we'll add sender['hash'] onto this when we deliver it. $last_prior_route now has the previously stored route 
+				// *except* for the sender['hash'] which would've been the last hop before it got to us.
+
+				$arr['route'] = $last_prior_route;
 			}
 		}
 
@@ -1956,9 +1988,19 @@ function sync_locations($sender,$arr,$absolute = false) {
 					}
 				}
 
-				if((($r[0]['hubloc_flags'] & HUBLOC_FLAGS_PRIMARY) && (! $location['primary']))
-					|| ((! ($r[0]['hubloc_flags'] & HUBLOC_FLAGS_PRIMARY)) && ($location['primary']))) {
+				if(($r[0]['hubloc_flags'] & HUBLOC_FLAGS_PRIMARY) && (! $location['primary'])) {
 					$m = q("update hubloc set hubloc_flags = (hubloc_flags & ~%d), hubloc_updated = '%s' where hubloc_id = %d",
+						intval(HUBLOC_FLAGS_PRIMARY),
+						dbesc(datetime_convert()),
+						intval($r[0]['hubloc_id'])
+					);
+					$r[0]['hubloc_flags'] = $r[0]['hubloc_flags'] ^ HUBLOC_FLAGS_PRIMARY;
+					hubloc_change_primary($r[0]);
+					$what .= 'primary_hub ';
+					$changed = true;
+				}
+				elseif((! ($r[0]['hubloc_flags'] & HUBLOC_FLAGS_PRIMARY)) && ($location['primary'])) {
+					$m = q("update hubloc set hubloc_flags = (hubloc_flags | %d), hubloc_updated = '%s' where hubloc_id = %d",
 						intval(HUBLOC_FLAGS_PRIMARY),
 						dbesc(datetime_convert()),
 						intval($r[0]['hubloc_id'])
@@ -1977,9 +2019,17 @@ function sync_locations($sender,$arr,$absolute = false) {
 						$changed = true;
 					}
 				}
-				if((($r[0]['hubloc_flags'] & HUBLOC_FLAGS_DELETED) && (! $location['deleted']))
-					|| ((! ($r[0]['hubloc_flags'] & HUBLOC_FLAGS_DELETED)) && ($location['deleted']))) {
+				if(($r[0]['hubloc_flags'] & HUBLOC_FLAGS_DELETED) && (! $location['deleted'])) {
 					$n = q("update hubloc set hubloc_flags = (hubloc_flags & ~%d), hubloc_updated = '%s' where hubloc_id = %d",
+						intval(HUBLOC_FLAGS_DELETED),
+						dbesc(datetime_convert()),
+						intval($r[0]['hubloc_id'])
+					);
+					$what .= 'delete_hub ';
+					$changed = true;
+				}
+				elseif((! ($r[0]['hubloc_flags'] & HUBLOC_FLAGS_DELETED)) && ($location['deleted'])) {
+					$n = q("update hubloc set hubloc_flags = (hubloc_flags | %d), hubloc_updated = '%s' where hubloc_id = %d",
 						intval(HUBLOC_FLAGS_DELETED),
 						dbesc(datetime_convert()),
 						intval($r[0]['hubloc_id'])
@@ -2415,7 +2465,7 @@ function build_sync_packet($uid = 0, $packet = null, $groups_changed = false) {
 		logger('packet: ' . print_r($packet,true),LOGGER_DATA);
 
 	if(! $uid)
-		$uid = local_user();
+		$uid = local_channel();
 
 	if(! $uid)
 		return;

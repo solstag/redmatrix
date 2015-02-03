@@ -1967,7 +1967,7 @@ function item_store($arr,$allow_exec = false) {
 		$arr['body'] = z_input_filter($arr['uid'],$arr['body'],$arr['mimetype']);
 
 
-		if(local_user() && (! $arr['sig'])) {
+		if(local_channel() && (! $arr['sig'])) {
 			$channel = get_app()->get_channel();
 			if($channel['channel_hash'] === $arr['author_xchan']) {
 				$arr['sig'] = base64url_encode(rsa_sign($arr['body'],$channel['channel_prvkey']));
@@ -2186,6 +2186,20 @@ function item_store($arr,$allow_exec = false) {
 		unset($arr['term']);
 	}
 
+ 	if(strlen($allow_cid) || strlen($allow_gid) || strlen($deny_cid) || strlen($deny_gid) || strlen($public_policy))
+		$private = 1;
+	else
+		$private = $arr['item_private']; 
+
+	$arr['parent']          = $parent_id;
+	$arr['allow_cid']       = $allow_cid;
+	$arr['allow_gid']       = $allow_gid;
+	$arr['deny_cid']        = $deny_cid;
+	$arr['deny_gid']        = $deny_gid;
+	$arr['public_policy']   = $public_policy;
+	$arr['item_private']    = $private;
+	$arr['comments_closed'] = $comments_closed;
+
 	logger('item_store: ' . print_r($arr,true), LOGGER_DATA);
 
 	dbesc_array($arr);
@@ -2202,7 +2216,6 @@ function item_store($arr,$allow_exec = false) {
 		$arr['mid'],           // already dbesc'd
 		intval($arr['uid'])
 	);
-
 
 	if($r && count($r)) {
 		$current_post = $r[0]['id'];
@@ -2223,40 +2236,14 @@ function item_store($arr,$allow_exec = false) {
 		);
 	}
 
-	if((! $parent_id) || ($arr['parent_mid'] === $arr['mid']))	
-		$parent_id = $current_post;
+	$arr['id'] = $current_post;
 
- 	if(strlen($allow_cid) || strlen($allow_gid) || strlen($deny_cid) || strlen($deny_gid) || strlen($public_policy))
-		$private = 1;
-	else
-		$private = $arr['item_private']; 
+	if(! intval($r[0]['parent'])) {
+		$x = q("update item set parent = id where id = %d",
+			intval($r[0]['id'])
+		);
+	}
 
-	// Set parent id - and also make sure to inherit the parent's ACL's.
-
-	$r = q("UPDATE item SET parent = %d, allow_cid = '%s', allow_gid = '%s',
-		deny_cid = '%s', deny_gid = '%s', public_policy = '%s', item_private = %d, comments_closed = '%s' 
-		WHERE id = %d",
-		intval($parent_id),
-		dbesc($allow_cid),
-		dbesc($allow_gid),
-		dbesc($deny_cid),
-		dbesc($deny_gid),
-		dbesc($public_policy),
-		intval($private),
-		dbesc($comments_closed),
-		intval($current_post)
-	);
-
-	// These are probably redundant now that we've queried the just stored post
-	$arr['id']        = $current_post;
-	$arr['parent']    = $parent_id;
-	$arr['allow_cid'] = $allow_cid;
-	$arr['allow_gid'] = $allow_gid;
-	$arr['deny_cid']  = $deny_cid;
-	$arr['deny_gid']  = $deny_gid;
-	$arr['public_policy']  = $public_policy;
-	$arr['item_private']   = $private;
-	$arr['comments_closed'] = $comments_closed;
 
 	// Store taxonomy
 
@@ -2368,7 +2355,7 @@ function item_store_update($arr,$allow_exec = false) {
         // apply the input filter here - if it is obscured it has been filtered already
         $arr['body'] = z_input_filter($arr['uid'],$arr['body'],$arr['mimetype']);
 
-        if(local_user() && (! $arr['sig'])) {
+        if(local_channel() && (! $arr['sig'])) {
             $channel = get_app()->get_channel();
             if($channel['channel_hash'] === $arr['author_xchan']) {
                 $arr['sig'] = base64url_encode(rsa_sign($arr['body'],$channel['channel_prvkey']));
@@ -2865,12 +2852,27 @@ function tag_deliver($uid,$item_id) {
 		if(preg_match($pattern,$body,$matches)) 
 			$tagged = true;
 
-		$pattern = '/@\!?\[zrl\=' . preg_quote($term['url'],'/') . '\]' . preg_quote($term['term'] . '+','/') . '\[\/zrl\]/';
-		if(preg_match($pattern,$body,$matches)) 
-			$plustagged = true;
+		$pattern = '/@\!?\[zrl\=(.*?)\](.*?)\+\[\/zrl\]/';
+
+		if(preg_match_all($pattern,$body,$matches,PREG_SET_ORDER)) {
+			$max_forums = get_config('system','max_tagged_forums');
+			if(! $max_forums)
+				$max_forums = 2;
+			$matched_forums = 0;
+			foreach($matches as $match) {
+				$matched_forums ++;
+				if($term['url'] === $match[1] && $term['term'] === $match[2]) {
+					if($matched_forums <= $max_forums) {
+						$plustagged = true;
+						break;
+					}
+					logger('forum ' . $term['term'] . ' exceeded max_tagged_forums - ignoring');
+				}
+			}
+		}
 
 		if(! ($tagged || $plustagged)) {
-			logger('tag_deliver: mention was in a reshare - ignoring');
+			logger('tag_deliver: mention was in a reshare or exceeded max_tagged_forums - ignoring');
 			return;
 		}
 
@@ -2987,6 +2989,7 @@ function tgroup_check($uid,$item) {
 		}
 	}				
 
+
 	if($mention) {
 		logger('tgroup_check: mention found for ' . $u[0]['channel_name']);
 	}
@@ -2995,6 +2998,7 @@ function tgroup_check($uid,$item) {
 
 	// At this point we've determined that the person receiving this post was mentioned in it.
 	// Now let's check if this mention was inside a reshare so we don't spam a forum
+	// note: $term has been set to the matching term
 
 
 	$body = $item['body'];
@@ -3006,13 +3010,34 @@ function tgroup_check($uid,$item) {
 
 	$body = preg_replace('/\[share(.*?)\[\/share\]/','',$body);
 
-	$pattern = '/@\!?\[zrl\=' . preg_quote($term['url'],'/') . '\]' . preg_quote($term['term'] . '+','/') . '\[\/zrl\]/';
+	
+//	$pattern = '/@\!?\[zrl\=' . preg_quote($term['url'],'/') . '\]' . preg_quote($term['term'] . '+','/') . '\[\/zrl\]/';
 
-	if(! preg_match($pattern,$body,$matches)) {
-		logger('tgroup_check: mention was in a reshare - ignoring');
-		return false;
+	$pattern = '/@\!?\[zrl\=(.*?)\](.*?)\+\[\/zrl\]/';
+
+	$found = false;
+
+	if(preg_match_all($pattern,$body,$matches,PREG_SET_ORDER)) {
+		$max_forums = get_config('system','max_tagged_forums');
+		if(! $max_forums)
+			$max_forums = 2;
+		$matched_forums = 0;
+		foreach($matches as $match) {
+			$matched_forums ++;
+			if($term['url'] === $match[1] && $term['term'] === $match[2]) {
+				if($matched_forums <= $max_forums) {
+					$found = true;
+					break;
+				}
+				logger('forum ' . $term['term'] . ' exceeded max_tagged_forums - ignoring');
+			}
+		}
 	}
 
+	if(! $found) {
+		logger('tgroup_check: mention was in a reshare or exceeded max_tagged_forums - ignoring');
+		return false;
+	}
 
 	return true;
 
@@ -3924,7 +3949,7 @@ function retain_item($id) {
 function drop_items($items) {
 	$uid = 0;
 
-	if(! local_user() && ! remote_user())
+	if(! local_channel() && ! remote_channel())
 		return;
 
 	if(count($items)) {
@@ -3980,7 +4005,7 @@ function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL,$force = fal
 		$ok_to_delete = true;
 
 	// owner deletion
-	if(local_user() && local_user() == $item['uid'])
+	if(local_channel() && local_channel() == $item['uid'])
 		$ok_to_delete = true;
 
 	// author deletion
@@ -4447,7 +4472,7 @@ function items_fetch($arr,$channel = null,$observer_hash = null,$client_mode = C
 
         $r = q("SELECT abook.*, xchan.* from abook left join xchan on abook_xchan = xchan_hash where abook_id = %d and abook_channel = %d and not ( abook_flags & " . intval(ABOOK_FLAG_BLOCKED) . ")>0 limit 1",
 			intval($arr['cid']),
-			intval(local_user())
+			intval(local_channel())
         );
         if($r) {
             $sql_extra = " AND item.parent IN ( SELECT DISTINCT parent FROM item WHERE true $sql_options AND uid = " . intval($arr['uid']) . " AND ( author_xchan = '" . dbesc($r[0]['abook_xchan']) . "' or owner_xchan = '" . dbesc($r[0]['abook_xchan']) . "' ) and item_restrict = 0 ) ";
@@ -4726,6 +4751,7 @@ function item_remove_cid($xchan_hash,$mid,$uid) {
 // Set item permissions based on results obtained from linkify_tags()
 function set_linkified_perms($linkified, &$str_contact_allow, &$str_group_allow, $profile_uid, $parent_item = false) {
 	$first_access_tag = true;
+
 	foreach($linkified as $x) {
 		$access_tag = $x['access_tag'];
 		if(($access_tag) && (! $parent_item)) {
