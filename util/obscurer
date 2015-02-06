@@ -27,7 +27,7 @@ if($action == 'obscure') {
 		echo 'Error: Invalid pubkey!'. "\n";
 		return;
 	}
-	$r = q("select id,title,body,item_flags from `item` where item_private>0 and not (item_flags & 0x1000) order by id");
+	$r = q("select id,title,body,item_flags from `item` where (item_private>0) and not (item_flags & 0x1000) order by id");
 	foreach($r as $rr){
 		$id = $rr['id'];
 		echo 'id: ' . $id . "\n";
@@ -54,7 +54,7 @@ elseif($action == 'unobscure') {
 		echo 'Error: Invalid prvkey!'. "\n";
 		return;
 	}
-	$r = q("select id,title,body,item_flags from `item` where item_private>0 and (item_flags & 0x1000) order by id");
+	$r = q("select id,title,body,item_flags from `item` where (item_private>0) and (item_flags & 0x1000) order by id");
 	foreach($r as $rr){
 		$id = $rr['id'];
 		echo 'id: ' . $id . "\n";

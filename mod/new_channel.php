@@ -110,7 +110,7 @@ function new_channel_content(&$a) {
 		'$desc'         => t('A channel is your own collection of related web pages. A channel can be used to hold social network profiles, blogs, conversation groups and forums, celebrity pages, and much more. You may create as many channels as your service provider allows.'),
 
 		'$label_name'   => t('Channel Name'),
-		'$help_name'    => t('Examples: "Bob Jameson", "Lisa and her Horses", "Soccer", "Aviation Group" '),
+		'$help_name'    => t('Exemplos: "Carla Marieta (Fisio Enfermaria M\'boi)", "Jorge Seixas (Enf. UBS Céu Azul)", "Thereza Mara (Med. UBS Céu Azul)", "Grupo de apoio sobre doenças cardiovasculares" '),
 		'$label_nick'   => t('Choose a short nickname'),
 		'$nick_desc'    => t('Your nickname will be used to create an easily remembered channel address (like an email address) which you can share with others.'),
 		'$label_import' => t('Or <a href="import">import an existing channel</a> from another location'),
