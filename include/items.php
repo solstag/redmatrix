@@ -400,14 +400,15 @@ function post_activity_item($arr) {
 				$arr['item_flags'] = $arr['item_flags'] | ITEM_VERIFIED;
 			}
 		}
-
-		logger('Encrypting local storage');
-		$key = get_config('system','pubkey');
-		$arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
-		if($arr['title'])
-			$arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
-		if($arr['body'])
-			$arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+		if(!get_config('system','item_store_plaintext')){
+			logger('Encrypting local storage');
+			$key = get_config('system','pubkey');
+			$arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
+			if($arr['title'])
+				$arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
+			if($arr['body'])
+				$arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+		}
 	}
 
 	$arr['mid']          = 	((x($arr,'mid')) ? $arr['mid'] : item_message_id());
@@ -887,11 +888,13 @@ function get_item_elements($x) {
 
 
 	if(intval($arr['item_private'])) {
-		$arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
-		if($arr['title'])
-			$arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
-		if($arr['body'])
-			$arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+		if(!get_config('system','item_store_plaintext')){
+			$arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
+			if($arr['title'])
+				$arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
+			if($arr['body'])
+				$arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+		}
 	}
 
 
@@ -1988,12 +1991,14 @@ function item_store($arr,$allow_exec = false) {
 			$arr = $translate['item'];
 		}
 		if($arr['item_private']) {
-			$key = get_config('system','pubkey');
-			$arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
-			if($arr['title'])
-				$arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
-			if($arr['body'])
-				$arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+			if(!get_config('system','item_store_plaintext')){
+				$key = get_config('system','pubkey');
+				$arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
+				if($arr['title'])
+					$arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
+				if($arr['body'])
+					$arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+			}
 		}
 
 	}
@@ -2376,12 +2381,14 @@ function item_store_update($arr,$allow_exec = false) {
 			$arr = $translate['item'];
 		}
 		if($arr['item_private']) {
-            $key = get_config('system','pubkey');
-            $arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
-            if($arr['title'])
-                $arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
-            if($arr['body'])
-                $arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+			if(!get_config('system','item_store_plaintext')){
+		        $key = get_config('system','pubkey');
+		        $arr['item_flags'] = $arr['item_flags'] | ITEM_OBSCURED;
+		        if($arr['title'])
+		            $arr['title'] = json_encode(crypto_encapsulate($arr['title'],$key));
+		        if($arr['body'])
+		            $arr['body']  = json_encode(crypto_encapsulate($arr['body'],$key));
+			}
         }
 
 	}
@@ -3092,12 +3099,14 @@ function start_delivery_chain($channel,$item,$item_id,$parent) {
 
 	if($private) {
 		if(!($flag_bits & ITEM_OBSCURED)) {
-			$key = get_config('system','pubkey');
-			$flag_bits = $flag_bits|ITEM_OBSCURED;
-			if($title)
-				$title = json_encode(crypto_encapsulate($title,$key));
-			if($body)
-				$body  = json_encode(crypto_encapsulate($body,$key));
+			if(!get_config('system','item_store_plaintext')){
+				$key = get_config('system','pubkey');
+				$flag_bits = $flag_bits | ITEM_OBSCURED;
+				if($title)
+					$title = json_encode(crypto_encapsulate($title,$key));
+				if($body)
+					$body  = json_encode(crypto_encapsulate($body,$key));
+			}
 		}
 	}
 	else {
