@@ -150,12 +150,10 @@ function search_content(&$a,$update = 0, $load = false) {
 			if(local_channel()) {
 				$r = q("SELECT $prefix mid, item.id as item_id, item.* from item
 					WHERE item_restrict = 0
-					AND ((( `item`.`allow_cid` = ''  AND `item`.`allow_gid` = '' AND `item`.`deny_cid`  = '' AND `item`.`deny_gid`  = '' AND item_private = 0 ) 
-					OR ( `item`.`uid` = %d )) OR item.owner_xchan = '%s' )
+					AND ( `item`.`uid` = %d )
 					$sql_extra
 					$suffix $pager_sql ",
-					intval(local_channel()),
-					dbesc($sys['xchan_hash'])
+					intval(local_channel())
 				);
 			}
 			if($r === null) {
