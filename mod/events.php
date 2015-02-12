@@ -8,6 +8,8 @@ require_once('include/items.php');
 
 function events_post(&$a) {
 
+	logger('post: ' . print_r($_REQUEST,true));
+
 	if(! local_channel())
 		return;
 
@@ -83,11 +85,19 @@ function events_post(&$a) {
 	$onerror_url = $a->get_baseurl() . "/events/" . $action . "?summary=$summary&description=$desc&location=$location&start=$start_text&finish=$finish_text&adjust=$adjust&nofinish=$nofinish";
 	if(strcmp($finish,$start) < 0 && !$nofinish) {
 		notice( t('Event can not end before it has started.') . EOL);
+		if(intval($_REQUEST['preview'])) {
+			echo( t('Unable to generate preview.'));
+			killme();
+		}
 		goaway($onerror_url);
 	}
 
 	if((! $summary) || (! $start)) {
 		notice( t('Event title and start time are required.') . EOL);
+		if(intval($_REQUEST['preview'])) {
+			echo( t('Unable to generate preview.'));
+			killme();
+		}
 		goaway($onerror_url);
 	}
 
@@ -102,6 +112,10 @@ function events_post(&$a) {
 		);
 		if(! $x) {
 			notice( t('Event not found.') . EOL);
+			if(intval($_REQUEST['preview'])) {
+				echo( t('Unable to generate preview.'));
+				killme();
+			}
 			return;
 		}
 		if($x[0]['allow_cid'] === '<' . $channel['channel_hash'] . '>' 
@@ -178,6 +192,12 @@ function events_post(&$a) {
 	$datarray['created'] = $created;
 	$datarray['edited'] = $edited;
 
+	if(intval($_REQUEST['preview'])) {
+		$html = format_event_html($datarray);
+		echo $html;
+		killme();
+	}
+
 	$event = event_store_event($datarray);
 
 
@@ -242,7 +262,7 @@ function events_content(&$a) {
 	$mode = 'view';
 	$y = 0;
 	$m = 0;
-	$ignored = ((x($_REQUEST,'ignored')) ? intval($_REQUEST['ignored']) : 0);
+	$ignored = ((x($_REQUEST,'ignored')) ? " and ignored = " . intval($_REQUEST['ignored']) . " "  : '');
 
 	if(argc() > 1) {
 		if(argc() > 2 && argv(1) == 'event') {
@@ -338,11 +358,10 @@ function events_content(&$a) {
 
 			$r = q("SELECT event.*, item.plink, item.item_flags, item.author_xchan, item.owner_xchan
                               from event left join item on event_hash = resource_id 
-				where resource_type = 'event' and event.uid = %d and event.ignore = %d 
+				where resource_type = 'event' and event.uid = %d $ignored
 				AND (( `adjust` = 0 AND ( `finish` >= '%s' or nofinish = 1 ) AND `start` <= '%s' ) 
 				OR  (  `adjust` = 1 AND ( `finish` >= '%s' or nofinish = 1 ) AND `start` <= '%s' )) ",
 				intval(local_channel()),
-				intval($ignored),
 				dbesc($start),
 				dbesc($finish),
 				dbesc($adjust_start),
@@ -588,7 +607,7 @@ function events_content(&$a) {
 			'$n_checked' => $n_checked,
 			'$f_text' => t('Event Finishes:'),
 			'$f_dsel' => datetimesel($f,new DateTime(),DateTime::createFromFormat('Y',$fyear+5),DateTime::createFromFormat('Y-m-d H:i',"$fyear-$fmonth-$fday $fhour:$fminute"),'finish_text',true,true,'start_text'),
-			'$adjust' => array('adjust', t('Adjust for viewer timezone'), $a_checked),
+			'$adjust' => array('adjust', t('Adjust for viewer timezone'), $a_checked, t('Important for events that happen in a particular place. Not practical for global holidays.'),),
 			'$a_text' => t('Adjust for viewer timezone'),
 			'$d_text' => t('Description:'), 
 			'$d_orig' => $d_orig,
@@ -598,6 +617,7 @@ function events_content(&$a) {
 			'$t_orig' => $t_orig,
 			'$sh_text' => t('Share this event'),
 			'$sh_checked' => $sh_checked,
+			'$preview' => t('Preview'),
 			'$permissions' => t('Permissions'),
 			'$acl' => (($orig_event['event_xchan']) ? '' : populate_acl(((x($orig_event)) ? $orig_event : $perm_defaults),false)),
 			'$submit' => t('Submit')

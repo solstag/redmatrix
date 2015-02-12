@@ -59,6 +59,8 @@ function item_post(&$a) {
 
 	$api_source = ((x($_REQUEST,'api_source') && $_REQUEST['api_source']) ? true : false);
 
+	$consensus = intval($_REQUEST['consensus']);
+
 	// 'origin' (if non-zero) indicates that this network is where the message originated,
 	// for the purpose of relaying comments to other conversation members. 
 	// If using the API from a device (leaf node) you must set origin to 1 (default) or leave unset.
@@ -516,6 +518,7 @@ function item_post(&$a) {
 		 * First protect any url inside certain bbcode tags so we don't double link it.
 		 */
 
+
 		$body = preg_replace_callback('/\[code(.*?)\[\/(code)\]/ism','red_escape_codeblock',$body);
 		$body = preg_replace_callback('/\[url(.*?)\[\/(url)\]/ism','red_escape_codeblock',$body);
 		$body = preg_replace_callback('/\[zrl(.*?)\[\/(zrl)\]/ism','red_escape_codeblock',$body);
@@ -681,6 +684,9 @@ function item_post(&$a) {
 	if(! $parent) {
 		$item_flags = $item_flags | ITEM_THREAD_TOP;
 	}
+
+	if($consensus)
+		$item_flags |= ITEM_CONSENSUS;
 
 	if ((! $plink) && ($item_flags & ITEM_THREAD_TOP)) {
 		$plink = z_root() . '/channel/' . $channel['channel_address'] . '/?f=&mid=' . $mid;

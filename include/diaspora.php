@@ -772,7 +772,6 @@ function diaspora_request($importer,$xml) {
 
 
 
-
 function diaspora_post($importer,$xml,$msg) {
 
 	$a = get_app();
@@ -828,6 +827,12 @@ function diaspora_post($importer,$xml,$msg) {
 		$body = scale_external_images($body);
 	}
 
+	$maxlen = get_max_import_size();
+
+	if($maxlen && mb_strlen($body) > $maxlen) {
+		$body = mb_substr($body,0,$maxlen,'UTF-8');
+		logger('message length exceeds max_import_size: truncated');
+	}
 
 //WTF? FIXME
 	// Add OEmbed and other information to the body
@@ -898,8 +903,8 @@ function diaspora_post($importer,$xml,$msg) {
 	}
 
 
-	// this won't work for Friendica or Redmatrix but it's probably the best we can do.
-	$plink = 'https://'.substr($diaspora_handle,strpos($diaspora_handle,'@')+1).'/posts/'.$guid;
+	$plink = service_plink($contact,$guid);
+
 
 	$datarray['uid'] = $importer['channel_id'];
 
@@ -1041,6 +1046,14 @@ function diaspora_reshare($importer,$xml,$msg) {
 		//return;
 	}
 
+	$maxlen = get_max_import_size();
+
+	if($maxlen && mb_strlen($body) > $maxlen) {
+		$body = mb_substr($body,0,$maxlen,'UTF-8');
+		logger('message length exceeds max_import_size: truncated');
+	}
+
+
 	//if(! $body) {
 	//	logger('diaspora_reshare: empty body: source= ' . $x);
 	//	return;
@@ -1116,8 +1129,7 @@ function diaspora_reshare($importer,$xml,$msg) {
 		}
 	}
 
-	// This won't work on redmatrix
-	$plink = 'https://'.substr($diaspora_handle,strpos($diaspora_handle,'@')+1).'/posts/'.$guid;
+	$plink = service_plink($contact,$guid);
 
 	$datarray['uid'] = $importer['channel_id'];
 	$datarray['mid'] = $datarray['parent_mid'] = $guid;
@@ -1198,7 +1210,7 @@ function diaspora_asphoto($importer,$xml,$msg) {
 		return;
 	}
 
-	$plink = 'https://'.substr($diaspora_handle,strpos($diaspora_handle,'@')+1).'/posts/'.$guid;
+	$plink = service_plink($contact,$guid);
 
 	$datarray = array();
 
@@ -1355,6 +1367,15 @@ function diaspora_comment($importer,$xml,$msg) {
 
 
 	$body = diaspora2bb($text);
+
+
+	$maxlen = get_max_import_size();
+
+	if($maxlen && mb_strlen($body) > $maxlen) {
+		$body = mb_substr($body,0,$maxlen,'UTF-8');
+		logger('message length exceeds max_import_size: truncated');
+	}
+
 
 	$datarray = array();
 
@@ -1542,6 +1563,15 @@ function diaspora_conversation($importer,$xml,$msg) {
 
 		$body = diaspora2bb($msg_text);
 
+
+		$maxlen = get_max_import_size();
+
+		if($maxlen && mb_strlen($body) > $maxlen) {
+			$body = mb_substr($body,0,$maxlen,'UTF-8');
+			logger('message length exceeds max_import_size: truncated');
+		}
+
+
 		$author_signed_data = $msg_guid . ';' . $msg_parent_guid . ';' . $msg_text . ';' . unxmlify($mesg->created_at) . ';' . $msg_diaspora_handle . ';' . $msg_conversation_guid;
 
 		$author_signature = base64_decode($msg_author_signature);
@@ -1679,6 +1709,17 @@ function diaspora_message($importer,$xml,$msg) {
 
 	$subject = $conversation['subject']; 
 	$body = diaspora2bb($msg_text);
+
+
+	$maxlen = get_max_import_size();
+
+	if($maxlen && mb_strlen($body) > $maxlen) {
+		$body = mb_substr($body,0,$maxlen,'UTF-8');
+		logger('message length exceeds max_import_size: truncated');
+	}
+
+
+
 	$message_id = $msg_diaspora_handle . ':' . $msg_guid;
 
 	$author_signed_data = $msg_guid . ';' . $msg_parent_guid . ';' . $msg_text . ';' . unxmlify($xml->created_at) . ';' . $msg_diaspora_handle . ';' . $msg_conversation_guid;

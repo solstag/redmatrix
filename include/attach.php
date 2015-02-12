@@ -65,10 +65,10 @@ function z_mime_content_type($filename) {
 	'mov' => 'video/quicktime',
 	'ogg' => 'application/ogg',
 	'opus' => 'audio/ogg',
-	'webm' => 'audio/webm',
 	'webm' => 'video/webm',
-	'mp4' => 'audio/mp4',
+//	'webm' => 'audio/webm',
 	'mp4' => 'video/mp4',
+//	'mp4' => 'audio/mp4',
 
 	// adobe
 	'pdf' => 'application/pdf',
@@ -1258,13 +1258,8 @@ function recursive_activity_recipients($allow_cid, $allow_gid, $deny_cid, $deny_
 }
 
 function in_group($group_id) {
-	//TODO: make these two queries one with a join.
-	$x = q("SELECT id FROM groups WHERE hash = '%s'",
+	$r = q("SELECT xchan FROM group_member left join groups on group_member.gid = group.id WHERE hash = '%s' ",
 		dbesc($group_id)
-	);
-
-	$r = q("SELECT xchan FROM group_member WHERE gid = %d",
-		intval($x[0]['id'])
 	);
 
 	foreach($r as $ig) {

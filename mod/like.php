@@ -49,6 +49,18 @@ function like_content(&$a) {
 		case 'unabstain':
 			$activity = ACTIVITY_ABSTAIN;
 			break;
+		case 'attendyes':
+		case 'unattendyes':
+			$activity = ACTIVITY_ATTEND;
+			break;
+		case 'attendno':
+		case 'unattendno':
+			$activity = ACTIVITY_ATTENDNO;
+			break;
+		case 'attendmaybe':
+		case 'unattendmaybe':
+			$activity = ACTIVITY_ATTENDMAYBE;
+			break;
 		default:
 			return;
 			break;
@@ -275,21 +287,42 @@ function like_content(&$a) {
 		else
 			killme();
 
-		$r = q("SELECT id FROM item WHERE verb = '%s' AND item_restrict = 0 
-			AND author_xchan = '%s' AND ( parent = %d OR thr_parent = '%s') LIMIT 1",
-			dbesc($activity),
+		
+		$verbs = " '".dbesc($activity)."' ";
+		$multi_undo = 0;		
+
+		// event participation and consensus items are essentially radio toggles. If you make a subsequent choice,
+		// we need to eradicate your first choice. 
+
+		if($activity === ACTIVITY_ATTEND || $activity === ACTIVITY_ATTENDNO || $activity === ACTIVITY_ATTENDMAYBE) {
+			$verbs = " '" . dbesc(ACTIVITY_ATTEND) . "','" . dbesc(ACTIVITY_ATTENDNO) . "','" . dbesc(ACTIVITY_ATTENDMAYBE) . "' ";
+			$multi_undo = 1;
+		}
+		if($activity === ACTIVITY_AGREE || $activity === ACTIVITY_DISAGREE || $activity === ACTIVITY_ABSTAIN) {
+			$verbs = " '" . dbesc(ACTIVITY_AGREE) . "','" . dbesc(ACTIVITY_DISAGREE) . "','" . dbesc(ACTIVITY_ABSTAIN) . "' ";
+			$multi_undo = 1;
+		}
+
+
+		$r = q("SELECT id FROM item WHERE verb in ( $verbs ) AND item_restrict = 0 
+			AND author_xchan = '%s' AND ( parent = %d OR thr_parent = '%s') and uid = %d ",
 			dbesc($observer['xchan_hash']),
 			intval($item_id),
-			dbesc($item['mid'])
+			dbesc($item['mid']),
+			intval($owner_uid)
 		);
 
 		if($r) {
 			// already liked it. Drop that item.
 			require_once('include/items.php');
-			drop_item($r[0]['id'],false,DROPITEM_PHASE1);
-			return;
+			foreach($r as $rr) {
+				drop_item($rr['id'],true,DROPITEM_PHASE1);
+			}
+			if($interactive)
+				return;
+			if(! $multi_undo)
+				killme();
 		}
-
 	}
 
 	$mid = item_message_id();
@@ -300,6 +333,8 @@ function like_content(&$a) {
 	}
 	else {
 		$post_type = (($item['resource_type'] === 'photo') ? t('photo') : t('status'));
+		if($item['obj_type'] === ACTIVITY_OBJ_EVENT)
+			$post_type = t('event');
 
 		$links = array(array('rel' => 'alternate','type' => 'text/html', 'href' => $item['plink']));
 		$objtype = (($item['resource_type'] === 'photo') ? ACTIVITY_OBJ_PHOTO : ACTIVITY_OBJ_NOTE ); 
@@ -354,8 +389,12 @@ function like_content(&$a) {
 		$bodyverb = t('%1$s doesn\'t agree with %2$s\'s %3$s');
 	if($verb === 'abstain')
 		$bodyverb = t('%1$s abstains from a decision on %2$s\'s %3$s');
-
-
+	if($verb === 'attendyes')
+		$bodyverb = t('%1$s is attending %2$s\'s %3$s');
+	if($verb === 'attendno')
+		$bodyverb = t('%1$s is not attending %2$s\'s %3$s');
+	if($verb === 'attendmaybe')
+		$bodyverb = t('%1$s may attend %2$s\'s %3$s');
 
 	if(! isset($bodyverb))
 			killme(); 
