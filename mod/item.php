@@ -529,6 +529,7 @@ function item_post(&$a) {
 		$body = preg_replace_callback('/\[\$b64url(.*?)\[\/(url)\]/ism','red_unescape_codeblock',$body);
 		$body = preg_replace_callback('/\[\$b64code(.*?)\[\/(code)\]/ism','red_unescape_codeblock',$body);
 
+
 		// fix any img tags that should be zmg
 
 		$body = preg_replace_callback('/\[img(.*?)\](.*?)\[\/img\]/ism','red_zrlify_img_callback',$body);
@@ -643,8 +644,7 @@ function item_post(&$a) {
 		}
 	}
 
-	if(local_channel() != $profile_uid)
-		$item_flags |= ITEM_UNSEEN;
+	$item_unseen =  ((local_channel() != $profile_uid) ? 1 : 0);
 	
 	if($post_type === 'wall' || $post_type === 'wall-comment')
 		$item_flags = $item_flags | ITEM_WALL;
@@ -694,7 +694,7 @@ function item_post(&$a) {
 	
 	$datarray['aid']            = $channel['channel_account_id'];
 	$datarray['uid']            = $profile_uid;
-
+	
 	$datarray['owner_xchan']    = (($owner_hash) ? $owner_hash : $owner_xchan['xchan_hash']);
 	$datarray['author_xchan']   = $observer['xchan_hash'];
 	$datarray['created']        = $created;
@@ -729,6 +729,7 @@ function item_post(&$a) {
 	$datarray['term']           = $post_tags;
 	$datarray['plink']          = $plink;
 	$datarray['route']          = $route;
+	$datarray['item_unseen']    = $item_unseen;
 
 	// preview mode - prepare the body for display and send it via json
 
@@ -739,7 +740,7 @@ function item_post(&$a) {
 		$datarray['author'] = $observer;
 		$datarray['attach'] = json_encode($datarray['attach']);
 		$o = conversation($a,array($datarray),'search',false,'preview');
-		logger('preview: ' . $o, LOGGER_DEBUG);
+//		logger('preview: ' . $o, LOGGER_DEBUG);
 		echo json_encode(array('preview' => $o));
 		killme();
 	}
