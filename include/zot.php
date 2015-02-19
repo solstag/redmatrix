@@ -1315,9 +1315,9 @@ function public_recips($msg) {
 
 	
 	if($msg['notify']['sender']['url'] === z_root())
-		$sql = " where (( " . $col . " & " . PERMS_NETWORK . " )>0  or ( " . $col . " & " . PERMS_SITE . " )>0 or ( " . $col . " & " . PERMS_PUBLIC . ")>0) ";				
+		$sql = " where (( " . $col . " & " . PERMS_NETWORK . " )>0  or ( " . $col . " & " . PERMS_SITE . " )>0 or ( " . $col . " & " . PERMS_PUBLIC . ")>0 or ( " . $col . " & " . PERMS_AUTHED . ")>0) ";
 	else
-		$sql = " where (( " . $col . " & " . PERMS_NETWORK . " )>0  or ( "  . $col . " & " . PERMS_PUBLIC . ")>0) ";
+		$sql = " where (( " . $col . " & " . PERMS_NETWORK . " )>0  or ( "  . $col . " & " . PERMS_PUBLIC . ")>0 or ( "  . $col . " & " . PERMS_AUTHED . ")>0) ";
 
 
 	$r = q("select channel_hash as hash from channel $sql or channel_hash = '%s' ",
@@ -1884,7 +1884,7 @@ function process_rating_delivery($sender,$arr) {
 	}
 	else {
 		$x = q("insert into xlink ( xlink_xchan, xlink_link, xlink_rating, xlink_rating_text, xlink_sig, xlink_updated, xlink_static )
-			values( '%s', '%s', %d, '%s', '%s', 1 ) ",
+			values( '%s', '%s', %d, '%s', '%s', '%s', 1 ) ",
 			dbesc($sender['hash']),
 			dbesc($arr['target']),
 			intval($arr['rating']),
@@ -2243,6 +2243,11 @@ function import_directory_profile($hash,$profile,$addr,$ud_flags = UPDATE_FLAGS_
 	$r = q("select * from xprof where xprof_hash = '%s' limit 1",
 		dbesc($hash)
 	);
+	
+	$age = intval($arr['xprof_age']);
+	if($age > 150) 
+		$age = 150;
+		
 	if($r) {
 		$update = false;
 		foreach($r[0] as $k => $v) {
@@ -2271,7 +2276,7 @@ function import_directory_profile($hash,$profile,$addr,$ud_flags = UPDATE_FLAGS_
 				where xprof_hash = '%s'",
 				dbesc($arr['xprof_desc']),
 				dbesc($arr['xprof_dob']),
-				intval($arr['xprof_age']),
+				$age,
 				dbesc($arr['xprof_gender']),
 				dbesc($arr['xprof_marital']),
 				dbesc($arr['xprof_sexual']),
@@ -2294,7 +2299,7 @@ function import_directory_profile($hash,$profile,$addr,$ud_flags = UPDATE_FLAGS_
 			dbesc($arr['xprof_hash']),
 			dbesc($arr['xprof_desc']),
 			dbesc($arr['xprof_dob']),
-			intval($arr['xprof_age']),
+			$age,
 			dbesc($arr['xprof_gender']),
 			dbesc($arr['xprof_marital']),
 			dbesc($arr['xprof_sexual']),
@@ -2442,7 +2447,7 @@ function import_site($arr,$pubkey) {
 	}
 	
 	$directory_url = htmlspecialchars($arr['directory_url'],ENT_COMPAT,'UTF-8',false);
-	$url = htmlspecialchars($arr['url'],ENT_COMPAT,'UTF-8',false);
+	$url = htmlspecialchars(strtolower($arr['url']),ENT_COMPAT,'UTF-8',false);
 	$sellpage = htmlspecialchars($arr['sellpage'],ENT_COMPAT,'UTF-8',false);
 	$site_location = htmlspecialchars($arr['location'],ENT_COMPAT,'UTF-8',false);
 	$site_realm = htmlspecialchars($arr['realm'],ENT_COMPAT,'UTF-8',false);

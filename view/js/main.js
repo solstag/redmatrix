@@ -713,6 +713,8 @@ function updateConvItems(mode,data) {
 		justifiedGalleryActive = true;
 		$('#photo-album-contents').justifiedGallery({
 			margins: 3,
+			border: 0,
+			ignoreElement: '#page-end',
 			sizeRangeSuffixes: {
 				'lt100': '-2',
 				'lt240': '-2',
@@ -1125,7 +1127,7 @@ $(document).ready(function() {
 
 
 	$(".autotime").timeago();
-	$("#toc").toc({content: "body", headings: "h1,h2,h3,h4"});
+	$("#toc").toc();
 	
 
 });
