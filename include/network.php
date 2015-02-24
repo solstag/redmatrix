@@ -109,7 +109,7 @@ function z_fetch_url($url, $binary = false, $redirects = 0, $opts = array()) {
 		$url_parsed = @parse_url($newurl);
 		if (isset($url_parsed)) {
 			@curl_close($ch);
-			return z_fetch_url($newurl,$binary,$redirects++,$opts);
+			return z_fetch_url($newurl,$binary,++$redirects,$opts);
 		}
 	}
 
@@ -239,7 +239,7 @@ function z_post_url($url,$params, $redirects = 0, $opts = array()) {
 			if($http_code == 303) {
 				return z_fetch_url($newurl,false,$redirects++,$opts);
 			} else {
-				return z_post_url($newurl,$params,$redirects++,$opts);
+				return z_post_url($newurl,$params,++$redirects,$opts);
 			}
 		}
 	}
