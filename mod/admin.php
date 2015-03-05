@@ -99,7 +99,8 @@ function admin_content(&$a) {
 		'channels'	 =>	Array($a->get_baseurl(true)."/admin/channels/", t("Channels") , "channels"),
 		'plugins'    =>	Array($a->get_baseurl(true)."/admin/plugins/", t("Plugins") , "plugins"),
 		'themes'     =>	Array($a->get_baseurl(true)."/admin/themes/", t("Themes") , "themes"),
-		'hubloc'     =>	Array($a->get_baseurl(true)."/admin/hubloc/", t("Server") , "server"),
+		'queue'      => array(z_root() . '/admin/queue', t('Inspect queue'), 'queue'),
+//		'hubloc'     =>	Array($a->get_baseurl(true)."/admin/hubloc/", t("Server") , "server"),
 		'profs'      => array(z_root() . '/admin/profs', t('Profile Config'), 'profs'),
 		'dbsync'     => Array($a->get_baseurl(true)."/admin/dbsync/", t('DB updates'), "dbsync")
 	);
@@ -164,6 +165,9 @@ function admin_content(&$a) {
 			case 'profs':
 				$o = admin_page_profs($a);
 				break;
+			case 'queue':
+				$o = admin_page_queue($a);
+				break;
 			default:
 				notice( t("Item not found.") );
 		}
@@ -198,7 +202,7 @@ function admin_page_summary(&$a) {
 	$r = q("SELECT COUNT(id) as `count` FROM `register`");
 	$pending = $r[0]['count'];
 
-	$r = q("select count(*) as total from outq");
+	$r = q("select count(*) as total from outq where outq_delivered = 0");
 	$queue = (($r) ? $r[0]['total'] : 0);
 
 	// We can do better, but this is a quick queue status
@@ -546,7 +550,7 @@ function admin_page_dbsync(&$a) {
 				$o .= sprintf( t('Executing %s failed. Check system logs.'), $func); 
 			}
 			elseif($retval === UPDATE_SUCCESS) {
-				$o .= sprintf( t('Update %s was successfully applied.', $func));
+				$o .= sprintf( t('Update %s was successfully applied.'), $func);
 				set_config('database',$func, 'success');
 			}
 			else
@@ -578,6 +582,46 @@ function admin_page_dbsync(&$a) {
 		'$apply' => t('Attempt to execute this update step automatically'),
 		'$failed' => $failed
 	));	
+
+	return $o;
+
+}
+
+function admin_page_queue($a) {
+	$o = '';
+
+	if($_REQUEST['drophub']) {
+		require_once('hubloc.php');
+		hubloc_mark_as_down($_REQUEST['drophub']);
+	}
+
+	if($_REQUEST['emptyhub']) {
+		$r = q("delete from outq where outq_posturl = '%s' ",
+			dbesc($_REQUEST['emptyhub'])
+		);
+	}
+
+
+
+	$r = q("select count(outq_posturl) as total, outq_posturl from outq 
+		where outq_delivered = 0 group by outq_posturl order by total desc");
+
+	for($x = 0; $x < count($r); $x ++) {
+		$r[$x]['eurl'] = urlencode($r[$x]['outq_posturl']);
+		$r[$x]['connected'] = datetime_convert('UTC',date_default_timezone_get(),$r[$x]['connected'],'Y-m-d');
+	}
+
+
+	$o = replace_macros(get_markup_template('admin_queue.tpl'), array(
+		'$banner' => t('Queue Statistics'),
+		'$numentries' => t('Total Entries'),
+		'$desturl' => t('Destination URL'),
+		'$nukehub' => t('Mark hub permanently offline'),
+		'$empty' => t('Empty queue for this hub'),
+		'$lastconn' => t('Last known contact'),
+		'$hasentries' => ((count($r)) ? true : false),
+		'$entries' => $r
+	));
 
 	return $o;
 

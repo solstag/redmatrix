@@ -9,6 +9,10 @@
 			if(obj.value == aStr['comment']) {
 				obj.value = '';
 				$("#comment-edit-text-" + id).addClass("comment-edit-text-full").removeClass("comment-edit-text-empty");
+				// Choose an arbitrary tab index that's greater than what we're using in jot (3 of them)
+				// The submit button gets tabindex + 1
+				$("#comment-edit-text-" + id).attr('tabindex','9');
+				$("#comment-edit-submit-" + id).attr('tabindex','10');
 				$("#comment-tools-" + id).show();
 			}
 		};
@@ -25,6 +29,8 @@
 			if(obj.value == '') {
 			obj.value = aStr['comment'];
 				$("#comment-edit-text-" + id).removeClass("comment-edit-text-full").addClass("comment-edit-text-empty");
+				$("#comment-edit-text-" + id).removeAttr('tabindex');
+				$("#comment-edit-submit-" + id).removeAttr('tabindex');
 				$("#comment-tools-" + id).hide();
 			}
 		};
@@ -111,6 +117,34 @@
 		}
 		return true;
 	}
+
+	function insertCommentURL(comment,id) {
+
+		reply = prompt(aStr['linkurl']);
+        if(reply && reply.length) {
+            reply = bin2hex(reply);
+			$('body').css('cursor', 'wait');
+            $.get('parse_url?binurl=' + reply, function(data) {
+				var tmpStr = $("#comment-edit-text-" + id).val();
+				if(tmpStr == comment) {
+					tmpStr = "";
+					$("#comment-edit-text-" + id).addClass("comment-edit-text-full");
+					$("#comment-edit-text-" + id).removeClass("comment-edit-text-empty");
+					openMenu("comment-tools-" + id);
+					$("#comment-edit-text-" + id).val(tmpStr);
+				}
+
+				textarea = document.getElementById("comment-edit-text-" +id);
+				textarea.value = textarea.value + data;
+				$('body').css('cursor', 'auto');
+
+            });
+        }
+		return true;
+	}
+
+
+
 
 	function viewsrc(id) {
 		$.colorbox({href: 'viewsrc/' + id, maxWidth: '80%', maxHeight: '80%' });
@@ -1107,7 +1141,7 @@ Array.prototype.remove = function(item) {
 function previewTheme(elm) {
 	theme = $(elm).val();
 	$.getJSON('pretheme?f=&theme=' + theme,function(data) {
-			$('#theme-preview').html('<div id="theme-desc">' + data.desc + '</div><div id="theme-version">' + data.version + '</div><div id="theme-credits">' + data.credits + '</div><a href="' + data.img + '"><img src="' + data.img + '" width="320" height="240" alt="' + theme + '" /></a>');
+			$('#theme-preview').html('<div id="theme-desc">' + data.desc + '</div><div id="theme-version">' + data.version + '</div><div id="theme-credits">' + data.credits + '</div><a href="' + data.img + '"><img src="' + data.img + '" style="max-width:100%; max-height:300px" alt="' + theme + '" /></a>');
 	});
 
 }
@@ -1166,7 +1200,7 @@ $(window).scroll(function () {
 		}
 
 		if($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
-//		if($(window).scrollTop() > ($(document).height() - $(window).height() * 1.5 )) {
+//		if($(window).scrollTop() > $(document).height() - ($(window).height() * 1.5 )) {
 
 			if((pageHasMoreContent) && (! loadingPage)) {
 				$('#more').hide();
@@ -1223,6 +1257,13 @@ function chanviewFull() {
 		data = h2b(data);
 		addeditortext(data);
 	}
+
+
+	function loadText(textRegion,data) {
+		var currentText = $(textRegion).val();
+		$(textRegion).val(currentText + data);
+	}
+
 
 	function addeditortext(data) {
 		if(plaintext == 'none') {

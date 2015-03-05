@@ -49,7 +49,7 @@ define ( 'RED_PLATFORM',            'redmatrix' );
 define ( 'RED_VERSION',             trim(file_get_contents('version.inc')) . 'R');
 define ( 'ZOT_REVISION',            1     );
 
-define ( 'DB_UPDATE_VERSION',       1137  );
+define ( 'DB_UPDATE_VERSION',       1139  );
 
 /**
  * Constant with a HTML line break.
@@ -1553,7 +1553,7 @@ function login($register = false, $form_id = 'main-login', $hiddens=false) {
 		'$form_id'      => $form_id,
 		'$lname'        => array('username', t('Email') , '', ''),
 		'$lpassword'    => array('password', t('Password'), '', ''),
-		'$remember'     => array('remember', t('Remember me'), '', ''),
+		'$remember'     => array('remember', t('Remember me'), '', '',array(t('No'),t('Yes'))),
 		'$hiddens'      => $hiddens,
 		'$register'     => $reg,
 		'$lostpass'     => t('Forgot your password?'),
@@ -2262,4 +2262,81 @@ function z_get_temp_dir() {
 	if(! $temp_dir)
 		$temp_dir = sys_get_temp_dir();
 	return $upload_dir;
+}
+
+function z_check_cert() {
+	$a = get_app();
+	if(strpos(z_root(),'https://') !== false) {
+		$x = z_fetch_url(z_root() . '/siteinfo/json');
+		if(! $x['success']) {
+			$recurse = 0;
+			$y = z_fetch_url(z_root() . '/siteinfo/json',false,$recurse,array('novalidate' => true));
+			if($y['success'])
+				cert_bad_email();
+		}
+	}
+} 
+
+
+
+function cert_bad_email() {
+
+	$a = get_app();
+
+	$email_tpl = get_intltext_template("cert_bad_eml.tpl");
+	$email_msg = replace_macros($email_tpl, array(
+		'$sitename' => $a->config['system']['sitename'],
+		'$siteurl' =>  $a->get_baseurl(),
+		'$error' => t('Website SSL certificate is not valid. Please correct.')
+	));
+
+	$subject = email_header_encode(sprintf(t('[red] Website SSL error for %s'), $a->get_hostname()));
+	mail($a->config['system']['admin_email'], $subject, $email_msg,
+		'From: Administrator' . '@' . $a->get_hostname() . "\n"
+		. 'Content-type: text/plain; charset=UTF-8' . "\n"
+		. 'Content-transfer-encoding: 8bit' );
+
+}
+
+
+// send warnings every 3-5 days if cron is not running.
+
+
+function check_cron_broken() {
+
+	$t = get_config('system','lastpollcheck');
+	if(! $t) {
+		// never checked before. Start the timer.
+		set_config('system','lastpollcheck',datetime_convert());
+		return;
+	}
+	if($t > datetime_convert('UTC','UTC','now - 3 days')) {
+		// Wait for 3 days before we do anything so as not to swamp the admin with messages
+		return;
+	}
+
+	$d = get_config('system','lastpoll');
+	if(($d) && ($d > datetime_convert('UTC','UTC','now - 3 days'))) {
+		// Scheduled tasks have run successfully in the last 3 days.
+		set_config('system','lastpollcheck',datetime_convert());
+		return;
+	}
+
+	$a = get_app();
+
+	$email_tpl = get_intltext_template("cron_bad_eml.tpl");
+	$email_msg = replace_macros($email_tpl, array(
+		'$sitename' => $a->config['system']['sitename'],
+		'$siteurl' =>  $a->get_baseurl(),
+		'$error' => t('Cron/Scheduled tasks not running.'),
+		'$lastdate' => (($d)? $d : t('never'))
+	));
+
+	$subject = email_header_encode(sprintf(t('[red] Cron tasks not running on %s'), $a->get_hostname()));
+	mail($a->config['system']['admin_email'], $subject, $email_msg,
+		'From: Administrator' . '@' . $a->get_hostname() . "\n"
+		. 'Content-type: text/plain; charset=UTF-8' . "\n"
+		. 'Content-transfer-encoding: 8bit' );
+	set_config('system','lastpollcheck',datetime_convert());
+	return;
 }

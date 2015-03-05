@@ -43,7 +43,7 @@
 							<button class="btn btn-default btn-xs" title="{{$edimg}}" onclick="insertbbcomment('{{$comment}}','img', {{$id}}); return false;">
 								<i class="icon-camera comment-icon"></i>
 							</button>
-							<button class="btn btn-default btn-xs" title="{{$edurl}}" onclick="insertbbcomment('{{$comment}}','url', {{$id}}); return false;">
+							<button class="btn btn-default btn-xs" title="{{$edurl}}" onclick="insertCommentURL('{{$comment}}',{{$id}}); return false;">
 								<i class="icon-link comment-icon"></i>
 							</button>
 							<button class="btn btn-default btn-xs" title="{{$edvideo}}" onclick="insertbbcomment('{{$comment}}','video', {{$id}}); return false;">
@@ -60,7 +60,7 @@
 					</div>
 					<div class="btn-group pull-right" id="comment-edit-submit-wrapper-{{$id}}">
 						{{if $preview}}
-						<button id="comment-edit-submit-{{$id}}" class="btn btn-default btn-xs" onclick="preview_comment({{$id}}); return false;" title="{{$preview}}">
+						<button id="comment-edit-presubmit-{{$id}}" class="btn btn-default btn-xs" onclick="preview_comment({{$id}}); return false;" title="{{$preview}}">
 							<i class="icon-eye-open comment-icon" ></i>
 						</button>
 						{{/if}}
