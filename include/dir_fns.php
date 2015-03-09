@@ -74,10 +74,31 @@ function check_upstream_directory() {
 	
 function dir_sort_links() {
 
-	// Build urls without order and pubforums so it's easy to tack on the changed value
+	$safe_mode = 1;
+
+	$observer = get_observer_hash();
+
+	if ($observer)
+		$safe_mode = get_xconfig($observer,'directory','safe_mode');
+	else
+		$safe_mode = ((array_key_exists('safemode',$_SESSION)) ? intval($_SESSION['safemode']) : false);
+	if($safe_mode === false)
+		$safe_mode = 1;
+		
+	if(! $safe_mode)
+		$toggle = t('Enable Safe Search');
+	else
+		$toggle = t('Disable Safe Search');
+
+	if($observer)
+		$globaldir = get_xconfig($observer,'directory','globaldir');
+	else
+		$globaldir = ((array_key_exists('globaldir',$_SESSION)) ? intval($_SESSION['globaldir']) : false);
+
+ 	// Build urls without order and pubforums so it's easy to tack on the changed value
 	// Probably there's an easier way to do this
 
-	$current_order = (($_REQUEST['order']) ? $_REQUEST['order'] : 'normal');
+	$current_order = (($_REQUEST['order']) ? $_REQUEST['order'] : 'date');
 	$url = 'directory?f=';
 
 	$tmp = array_merge($_GET,$_POST);
@@ -88,6 +109,8 @@ function dir_sort_links() {
 
 	$tmp = array_merge($_GET,$_POST);
 	unset($tmp['pubforums']);
+	unset($tmp['global']);
+	unset($tmp['safe']);
 	unset($tmp['q']);
 	unset($tmp['f']);
 	$forumsurl = $url . http_build_query($tmp);
@@ -104,7 +127,13 @@ function dir_sort_links() {
 		'$selected_sort' => $current_order,
 		'$sorturl' => $sorturl,
 		'$forumsurl' => $forumsurl,
+		'$safemode' => t('Safe Mode'),
+		'$toggle' => $toggle,
+		'$safemode' => array('safemode', t('Safe Mode'),$safe_mode,'','',' onchange=\'window.location.href="' . $forumsurl . '&safe="+(this.checked ? 1 : 0)\''), 
 
+		'$pubforums' => array('pubforums', t('Public Forums Only'),(x($_REQUEST,'pubforums') ? $_REQUEST['pubforums'] : ''),'','',' onchange=\'window.location.href="' . $forumsurl . '&pubforums="+(this.checked ? 1 : 0)\''), 
+		'$globaldir' => array('globaldir', t('This Website Only'), 1-intval($globaldir),'','',' onchange=\'window.location.href="' . $forumsurl . '&global="+(this.checked ? 0 : 1)\''),
+		'$localdir' => t('This Website Only'),
 	));
 	return $o;
 }

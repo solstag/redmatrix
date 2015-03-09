@@ -185,7 +185,7 @@ function settings_post(&$a) {
 		set_pconfig(local_channel(),'system','user_scalable',$user_scalable);
 		set_pconfig(local_channel(),'system','update_interval', $browser_update);
 		set_pconfig(local_channel(),'system','itemspage', $itemspage);
-		set_pconfig(local_channel(),'system','no_smilies',$nosmile);
+		set_pconfig(local_channel(),'system','no_smilies',1-intval($nosmile));
 		set_pconfig(local_channel(),'system','title_tosource',$title_tosource);
 		set_pconfig(local_channel(),'system','channel_list_mode', $channel_list_mode);
 		set_pconfig(local_channel(),'system','network_list_mode', $network_list_mode);
@@ -853,7 +853,7 @@ function settings_content(&$a) {
 			'$user_scalable' => array('user_scalable', t("Enable user zoom on mobile devices"), $user_scalable, '', $yes_no),
 			'$ajaxint'   => array('browser_update',  t("Update browser every xx seconds"), $browser_update, t('Minimum of 10 seconds, no maximum')),
 			'$itemspage'   => array('itemspage',  t("Maximum number of conversations to load at any time:"), $itemspage, t('Maximum of 100 items')),
-			'$nosmile'	=> array('nosmile', t("Don't show emoticons"), $nosmile, '', $yes_no),
+			'$nosmile'	=> array('nosmile', t("Show emoticons (smilies) as images"), 1-intval($nosmile), '', $yes_no),
 			'$title_tosource'	=> array('title_tosource', t("Link post titles to source"), $title_tosource, '', $yes_no),
 			'$layout_editor' => t('System Page Layout Editor - (advanced)'),
 			'$theme_config' => $theme_config,
