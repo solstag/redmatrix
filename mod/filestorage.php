@@ -14,13 +14,14 @@ function filestorage_post(&$a) {
 
 	$channel_id = ((x($_POST, 'uid')) ? intval($_POST['uid']) : 0);
 
-	if((! $channel_id) || (! local_user()) || ($channel_id != local_user())) {
+	if((! $channel_id) || (! local_channel()) || ($channel_id != local_channel())) {
 		notice( t('Permission denied.') . EOL);
 		return;
 	}
 
 	$recurse = ((x($_POST, 'recurse')) ? intval($_POST['recurse']) : 0);
 	$resource = ((x($_POST, 'filehash')) ? notags($_POST['filehash']) : '');
+	$no_activity = ((x($_POST, 'no_activity')) ? intval($_POST['no_activity']) : 0);
 
 	if(! $resource) {
 		notice(t('Item not found.') . EOL);
@@ -32,11 +33,15 @@ function filestorage_post(&$a) {
 	$str_group_deny    = perms2str($_REQUEST['group_deny']);
 	$str_contact_deny  = perms2str($_REQUEST['contact_deny']);
  
-	attach_change_permissions($channel_id, $resource, $str_contact_allow, $str_group_allow, $str_contact_deny,$str_group_deny, $recurse = false);
+	attach_change_permissions($channel_id, $resource, $str_contact_allow, $str_group_allow, $str_contact_deny, $str_group_deny, $recurse);
 
 	//Build directory tree and redirect
 	$channel = $a->get_channel();
 	$cloudPath = get_parent_cloudpath($channel_id, $channel['channel_address'], $resource);
+	$object = get_file_activity_object($channel_id, $resource, $cloudPath);
+
+	file_activity($channel_id, $object, $str_contact_allow, $str_group_allow, $str_contact_deny, $str_group_deny, 'post', $no_activity);
+
 	goaway($cloudPath);
 }
 
@@ -71,7 +76,7 @@ function filestorage_content(&$a) {
 	// Since we have ACL'd files in the wild, but don't have ACL here yet, we
 	// need to return for anyone other than the owner, despite the perms check for now.
 
-	$is_owner = (((local_user()) && ($owner  == local_user())) ? true : false);
+	$is_owner = (((local_channel()) && ($owner  == local_channel())) ? true : false);
 	if(! $is_owner) {
 		info( t('Permission Denied.') . EOL );
 		return;
@@ -127,10 +132,14 @@ function filestorage_content(&$a) {
 
 		$lockstate = (($f['allow_cid'] || $f['allow_gid'] || $f['deny_cid'] || $f['deny_gid']) ? 'lock' : 'unlock'); 
 
+		// Encode path that is used for link so it's a valid URL
+		// Keep slashes as slashes, otherwise mod_rewrite doesn't work correctly
+		$encoded_path = str_replace('%2F', '/', rawurlencode($cloudpath));
+
 		$o = replace_macros(get_markup_template('attach_edit.tpl'), array(
 			'$header' => t('Edit file permissions'),
 			'$file' => $f,
-			'$cloudpath' => z_root() . '/' . $cloudpath,
+			'$cloudpath' => z_root() . '/' . $encoded_path,
 			'$parentpath' => $parentpath,
 			'$uid' => $channel['channel_id'],
 			'$channelnick' => $channel['channel_address'],
@@ -143,10 +152,14 @@ function filestorage_content(&$a) {
 			'$isadir' => $is_a_dir,
 			'$cpdesc' => t('Copy/paste this code to attach file to a post'),
 			'$cpldesc' => t('Copy/paste this URL to link file from a web page'),
-			'$submit' => t('Submit')
+			'$submit' => t('Submit'),
+			'$attach_btn_title' => t('Attach this file to a new post'),
+			'$link_btn_title' => t('Show URL to this file'),
+			'$activity_btn_title' => t('Do not show in shared with me folder of your connections')
 		));
 
-		return $o;
+		echo $o;
+		killme();
 	}
 
 	goaway(z_root() . '/cloud/' . $which);

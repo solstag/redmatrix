@@ -98,10 +98,10 @@ function vcard_from_xchan($xchan, $observer = null, $mode = '') {
 
 // FIXME - show connect button to observer if appropriate
 	$connect = false;
-	if(local_user()) {
+	if(local_channel()) {
 		$r = q("select * from abook where abook_xchan = '%s' and abook_channel = %d limit 1",
 			dbesc($xchan['xchan_hash']),
-			intval(local_user())
+			intval(local_channel())
 		);
 		if(! $r)
 			$connect = t('Connect');
@@ -119,6 +119,7 @@ function vcard_from_xchan($xchan, $observer = null, $mode = '') {
 		'$name'    => $xchan['xchan_name'],
 		'$photo'   => ((is_array($a->profile) && array_key_exists('photo',$a->profile)) ? $a->profile['photo'] : $xchan['xchan_photo_l']),
 		'$follow'  => $xchan['xchan_addr'],
+		'$link'    => zid($xchan['xchan_url']),
 		'$connect' => $connect,
 		'$newwin'  => (($mode === 'chanview') ? t('New window') : ''),
 		'$newtit'  => t('Open the selected location in a different window or browser tab'),
@@ -350,7 +351,7 @@ function channel_remove($channel_id, $local = true, $unset_session=true) {
 
 	proc_run('php','include/directory.php',$channel_id);
 
-	if($channel_id == local_user() && $unset_session) {
+	if($channel_id == local_channel() && $unset_session) {
 		unset($_SESSION['authenticated']);
 		unset($_SESSION['uid']);
 		goaway($a->get_baseurl());
@@ -373,7 +374,7 @@ function mark_orphan_hubsxchans() {
 	if($dirmode == DIRECTORY_MODE_NORMAL)
 		return;
 
-    $r = q("update hubloc set hubloc_status = (hubloc_status | %d) where not (hubloc_status & %d)>0 
+    $r = q("update hubloc set hubloc_status = (hubloc_status | %d) where (hubloc_status & %d) = 0 
 		and hubloc_network = 'zot' and hubloc_connected < %s - interval %s",
         intval(HUBLOC_OFFLINE),
         intval(HUBLOC_OFFLINE),
@@ -519,6 +520,8 @@ function contact_remove($channel_id, $abook_id) {
 	if((! $channel_id) || (! $abook_id))
 		return false;
 
+	logger('removing contact ' . $abook_id . ' for channel ' . $channel_id,LOGGER_DEBUG);
+
 	$archive = get_pconfig($channel_id, 'system','archive_removed_contacts');
 	if($archive) {
 		q("update abook set abook_flags = ( abook_flags | %d ) where abook_id = %d and abook_channel = %d",
@@ -581,12 +584,31 @@ function contact_remove($channel_id, $abook_id) {
 
 function random_profile() {
 	$randfunc = db_getfunc('rand');
-	$r = q("select xchan_url from xchan left join hubloc on hubloc_hash = xchan_hash where hubloc_connected > %s - interval %s order by $randfunc limit 1",
-		db_utcnow(), db_quoteinterval('30 day')
-	);
-	if($r)
-		return $r[0]['xchan_url'];
+
+	$checkrandom = get_config('randprofile','check'); // False by default
+	$retryrandom = intval(get_config('randprofile','retry'));
+	if($retryrandom == 0) $retryrandom = 5;
+
+	for($i = 0; $i < $retryrandom; $i++) {
+
+		$r = q("select xchan_url from xchan left join hubloc on hubloc_hash = xchan_hash where hubloc_connected > %s - interval %s order by $randfunc limit 1",
+			db_utcnow(), db_quoteinterval('30 day')
+		);
+
+		if(!$r) return ''; // Couldn't get a random channel
+
+		if($checkrandom) {
+			$x = z_fetch_url($r[0]['xchan_url']);
+			if($x['success'])
+				return $r[0]['xchan_url'];
+			else
+				logger('Random channel turned out to be bad.');
+		}
+		else {
+			return $r[0]['xchan_url'];
+		}
+
+	}
 	return '';
 }
-
 

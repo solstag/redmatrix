@@ -59,6 +59,7 @@ require_once('include/html2plain.php');
  *       relay					item_id (item was relayed to owner, we will deliver it as owner)
  *       location               channel_id
  *       request                channel_id            xchan_hash             message_id
+ *       rating                 xlink_id
  *
  */
 
@@ -99,10 +100,14 @@ function notifier_run($argv, $argc){
 		// Get the recipient	
 		$r = q("select abook.*, hubloc.* from abook 
 			left join hubloc on hubloc_hash = abook_xchan
-			where abook_id = %d and not ( abook_flags & %d )>0 limit 1",
+			where abook_id = %d and not ( abook_flags & %d ) > 0 
+			and not (hubloc_flags & %d) > 0  and not (hubloc_status & %d) > 0 limit 1",
 			intval($item_id),
-			intval(ABOOK_FLAG_SELF)
+			intval(ABOOK_FLAG_SELF),
+			intval(HUBLOC_FLAGS_DELETED),
+			intval(HUBLOC_OFFLINE)
 		);
+
 		if($r) {
 			// Get the sender
 			$s = q("select * from channel left join xchan on channel_hash = xchan_hash where channel_id = %d limit 1",
@@ -115,8 +120,11 @@ function notifier_run($argv, $argc){
 				}
 				else {
 					// send a refresh message to each hub they have registered here	
-					$h = q("select * from hubloc where hubloc_hash = '%s'",
-						dbesc($r[0]['hubloc_hash'])
+					$h = q("select * from hubloc where hubloc_hash = '%s' 
+						and not (hubloc_flags & %d) > 0  and not (hubloc_status & %d) > 0",
+						dbesc($r[0]['hubloc_hash']),
+						intval(HUBLOC_FLAGS_DELETED),
+						intval(HUBLOC_OFFLINE)
 					);
 					if($h) {
 						foreach($h as $hh) {
@@ -137,7 +145,6 @@ function notifier_run($argv, $argc){
 				}
 			}
 		}
-
 		return;
 	}	
 
@@ -165,6 +172,7 @@ function notifier_run($argv, $argc){
 		}
 		xchan_mail_query($message[0]);
 		$uid = $message[0]['channel_id'];
+		$recipients[] = $message[0]['from_xchan']; // include clones
 		$recipients[] = $message[0]['to_xchan'];
 		$item = $message[0];
 
@@ -313,9 +321,12 @@ function notifier_run($argv, $argc){
 		$r = fetch_post_tags($r);
 		
 		$target_item = $r[0];
+		$deleted_item = false;
 
-		if($target_item['item_restrict'] & ITEM_DELETED)
+		if($target_item['item_restrict'] & ITEM_DELETED) {
 			logger('notifier: target item ITEM_DELETED', LOGGER_DEBUG);
+			$deleted_item = true;
+		}
 
 		$unforwardable = ITEM_UNPUBLISHED|ITEM_DELAYED_PUBLISH|ITEM_WEBPAGE|ITEM_BUILDBLOCK|ITEM_PDL;
 		if($target_item['item_restrict'] & $unforwardable) {
@@ -361,7 +372,19 @@ function notifier_run($argv, $argc){
 
 		$encoded_item = encode_item($target_item);
 		
-		$relay_to_owner = (((! $top_level_post) && ($target_item['item_flags'] & ITEM_ORIGIN)) ? true : false);
+		// Send comments to the owner to re-deliver to everybody in the conversation
+		// We only do this if the item in question originated on this site. This prevents looping.
+		// To clarify, a site accepting a new comment is responsible for sending it to the owner for relay.
+		// Relaying should never be initiated on a post that arrived from elsewhere.  
+
+		// We should normally be able to rely on ITEM_ORIGIN, but start_delivery_chain() incorrectly set this
+		// flag on comments for an extended period. So we'll also call comment_local_origin() which looks at
+		// the hostname in the message_id and provides a second (fallback) opinion. 
+
+		$relay_to_owner = (((! $top_level_post) && ($target_item['item_flags'] & ITEM_ORIGIN) && comment_local_origin($target_item)) 
+			? true 
+			: false
+		);
 
 		$uplink = false;
 
@@ -472,12 +495,10 @@ function notifier_run($argv, $argc){
 	// Now we have collected recipients (except for external mentions, FIXME)
 	// Let's reduce this to a set of hubs.
 
-	
-	// for public posts always include our own hub
-// this shouldn't be needed any more. collect_recipients should take care of it.
-//	$sql_extra = (($private) ? "" : " or hubloc_url = '" . dbesc(z_root()) . "' ");
-
 	logger('notifier: hub choice: ' . intval($relay_to_owner) . ' ' . intval($private) . ' ' . $cmd, LOGGER_DEBUG);
+
+	// FIXME: I think we need to remove the private bit or this clause will never execute. Needs more coffee to think it through.
+	// We may in fact have to send it to clones in case the one we pick recently died. 
 
 	if($relay_to_owner && (! $private) && ($cmd !== 'relay')) {
 
@@ -493,40 +514,51 @@ function notifier_run($argv, $argc){
 
 
 		$r = q("select hubloc_guid, hubloc_url, hubloc_sitekey, hubloc_network, hubloc_flags, hubloc_callback, hubloc_host from hubloc 
-			where hubloc_hash in (" . implode(',',$recipients) . ") group by hubloc_sitekey order by hubloc_connected desc limit 1");
+			where hubloc_hash in (" . implode(',',$recipients) . ") order by hubloc_connected desc limit 1");
 	} 
 	else {
-		if(ACTIVE_DBTYPE == DBTYPE_POSTGRES) {
-			$r = q("select distinct on (hubloc_sitekey) hubloc_guid, hubloc_url, hubloc_sitekey, hubloc_network, hubloc_flags, hubloc_callback, hubloc_host from hubloc 
-				where hubloc_hash in (" . implode(',',$recipients) . ") and not (hubloc_flags & %d)>0  and not (hubloc_status & %d)>0",
-				intval(HUBLOC_FLAGS_DELETED),
-				intval(HUBLOC_OFFLINE)
-			);
-		} else {
 		$r = q("select hubloc_guid, hubloc_url, hubloc_sitekey, hubloc_network, hubloc_flags, hubloc_callback, hubloc_host from hubloc 
-			where hubloc_hash in (" . implode(',',$recipients) . ") and not (hubloc_flags & %d)>0  and not (hubloc_status & %d)>0 group by hubloc_sitekey",
+			where hubloc_hash in (" . implode(',',$recipients) . ") and not (hubloc_flags & %d) > 0  and not (hubloc_status & %d) > 0",
 			intval(HUBLOC_FLAGS_DELETED),
 			intval(HUBLOC_OFFLINE)
-		);
-		}
-	}
+		);		
+	} 
 
 	if(! $r) {
 		logger('notifier: no hubs');
 		return;
 	}
+
 	$hubs = $r;
 
-	$hublist = array();
-	$keys = array();
+
+	/**
+	 * Reduce the hubs to those that are unique. For zot hubs, we need to verify uniqueness by the sitekey, since it may have been 
+	 * a re-install which has not yet been detected and pruned.
+	 * For other networks which don't have or require sitekeys, we'll have to use the URL
+	 */
+
+
+	$hublist = array(); // this provides an easily printable list for the logs
+	$dhubs   = array(); // delivery hubs where we store our resulting unique array
+	$keys    = array(); // array of keys to check uniquness for zot hubs
+	$urls    = array(); // array of urls to check uniqueness of hubs from other networks
+
 
 	foreach($hubs as $hub) {
-		// don't try to deliver to deleted hublocs - and inexplicably SQL "distinct" and "group by"
-		// both return records with duplicate keys in rare circumstances
-// FIXME this is probably redundant now.
-		if((! ($hub['hubloc_flags'] & HUBLOC_FLAGS_DELETED)) && (! in_array($hub['hubloc_sitekey'],$keys))) {
-			$hublist[] = $hub['hubloc_host'];
-			$keys[] = $hub['hubloc_sitekey'];
+		if($hub['hubloc_network'] == 'zot') {
+			if(! in_array($hub['hubloc_sitekey'],$keys)) {
+				$hublist[] = $hub['hubloc_host'];
+				$dhubs[] = $hub;
+				$keys[] = $hub['hubloc_sitekey'];
+			}
+		}
+		else {
+			if(! in_array($hub['hubloc_url'],$urls)) {
+				$hublist[] = $hub['hubloc_host'];
+				$dhubs[] = $hub;
+				$urls[] = $hub['hubloc_url'];
+			}
 		}
 	}
 
@@ -542,7 +574,7 @@ function notifier_run($argv, $argc){
 
 	$deliver = array();
 
-	foreach($hubs as $hub) {
+	foreach($dhubs as $hub) {
 
 		if(defined('DIASPORA_RELIABILITY_EMULATION')) {
 			$cointoss = mt_rand(0,2);

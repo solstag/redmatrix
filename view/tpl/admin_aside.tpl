@@ -16,9 +16,9 @@
 	<li><a href='{{$admin.site.0}}'>{{$admin.site.1}}</a></li>
 	<li><a href='{{$admin.users.0}}'>{{$admin.users.1}}<span id='pending-update' title='{{$h_pending}}'></span></a></li>
 	<li><a href='{{$admin.channels.0}}'>{{$admin.channels.1}}</a></li>
+	<li><a href='{{$admin.queue.0}}'>{{$admin.queue.1}}</a></li>
 	<li><a href='{{$admin.plugins.0}}'>{{$admin.plugins.1}}</a></li>
 	<li><a href='{{$admin.themes.0}}'>{{$admin.themes.1}}</a></li>
-	<li><a href='{{$admin.hubloc.0}}'>{{$admin.hubloc.1}}</a></li>
 	<li><a href='{{$admin.dbsync.0}}'>{{$admin.dbsync.1}}</a></li>
 </ul>
 </div>

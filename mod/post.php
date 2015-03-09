@@ -148,7 +148,7 @@ function post_init(&$a) {
 		// If they are already authenticated and haven't changed credentials, 
 		// we can save an expensive network round trip and improve performance.
 
-		$remote = remote_user();
+		$remote = remote_channel();
 		$result = null;
 		$remote_service_class = '';
 		$remote_level = 0;
@@ -219,7 +219,7 @@ function post_init(&$a) {
 					$DNT = $j['DNT'];
 			}
 			// everything is good... maybe
-			if(local_user()) {
+			if(local_channel()) {
 
 				// tell them to logout if they're logged in locally as anything but the target remote account
 				// in which case just shut up because they don't need to be doing this at all.
@@ -467,7 +467,7 @@ function post_post(&$a) {
 	 * tells us we need to unencapsulate the AES-256-CBC content using the site private key
 	 */
 
-	if(array_key_exists('iv',$data)) {
+	if($data && array_key_exists('iv',$data)) {
 		$encrypted_packet = true;
 		$data = crypto_unencapsulate($data,get_config('system','prvkey'));
 		logger('mod_zot: decrypt1: ' . $data, LOGGER_DATA);

@@ -64,8 +64,6 @@
 		$toolicon_activecolour = '#fff';
 	if (! $font_colour)
 		$font_colour = "#fff";
-	if (! $widget_brdrcolour)
-		$widget_brdrcolour = "#000";
 	if (! $blockquote_colour)
 		$blockquote_colour = "#eee";
 	if (! $blockquote_bgcolour)
@@ -176,6 +174,8 @@
       $advperm_gradientcol = "#000";
    if(! $cal_bgcolour)
       $cal_bgcolour = "#000";
+   if(! $chat_txtbgcol)
+      $chat_txtbgcol = "#000";
    if(! $fancybox_bgcolour)
       $fancybox_bgcolour = "#000";
 	if (!$admintable_hoverbgcol)

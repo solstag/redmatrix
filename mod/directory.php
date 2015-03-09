@@ -10,37 +10,54 @@ function directory_init(&$a) {
 
 	if(x($_GET,'ignore')) {
 		q("insert into xign ( uid, xchan ) values ( %d, '%s' ) ",
-			intval(local_user()),
+			intval(local_channel()),
 			dbesc($_GET['ignore'])
 		);
 	}
+
+	$observer = get_observer_hash();
+	$global_changed = false;
+	$safe_changed = false;
+
+	if(array_key_exists('global',$_REQUEST)) {
+		$globaldir = intval($_REQUEST['global']);
+		$global_changed = true;
+	}
+	if($global_changed) {
+		$_SESSION['globaldir'] = $globaldir;
+		if($observer)
+			set_xconfig($observer,'directory','globaldir',$globaldir);
+	} 		
+
+	if(array_key_exists('safe',$_REQUEST)) {
+		$safemode = intval($_REQUEST['safe']);
+		$safe_changed = true;
+	}
+	if($safe_changed) {
+		$_SESSION['safemode'] = $safemode;
+		if($observer)
+			set_xconfig($observer,'directory','safe_mode',$safemode);
+	} 		
+
 }
 
 function directory_content(&$a) {
 
-	if((get_config('system','block_public')) && (! local_user()) && (! remote_user())) {
+	if((get_config('system','block_public')) && (! local_channel()) && (! remote_channel())) {
 		notice( t('Public access denied.') . EOL);
 		return;
 	}
 
-	$safe_mode = 1;
-
 	$observer = get_observer_hash();
-	
-	if($observer) {
-		$safe_mode = get_xconfig($observer,'directory','safe_mode');
-	}
-	if($safe_mode === false)
-		$safe_mode = 1;
-	else
-		$safe_mode = intval($safe_mode);
 
-	if(x($_REQUEST,'safe'))
-		$safe_mode = (intval($_REQUEST['safe']));
+	$globaldir = get_globaldir_setting($observer);
+	$safe_mode = get_safemode_setting($observer);
 
 	$pubforums = null;
 	if(array_key_exists('pubforums',$_REQUEST))
 		$pubforums = intval($_REQUEST['pubforums']);
+	if(! $pubforums)
+		$pubforums = null;
 
 	$o = '';
 	nav_set_selected('directory');
@@ -51,17 +68,17 @@ function directory_content(&$a) {
 		$search = ((x($_GET,'search')) ? notags(trim(rawurldecode($_GET['search']))) : '');
 
 
-	if(strpos($search,'=') && local_user() && get_pconfig(local_user(),'feature','expert'))
+	if(strpos($search,'=') && local_channel() && get_pconfig(local_channel(),'feature','expert'))
 		$advanced = $search;
 
 
 	$keywords = (($_GET['keywords']) ? $_GET['keywords'] : '');
 
 	// Suggest channels if no search terms or keywords are given
-	$suggest = (local_user() && x($_REQUEST,'suggest')) ? $_REQUEST['suggest'] : '';
+	$suggest = (local_channel() && x($_REQUEST,'suggest')) ? $_REQUEST['suggest'] : '';
 
 	if($suggest) {
-		$r = suggestion_query(local_user(),get_observer_hash());
+		$r = suggestion_query(local_channel(),get_observer_hash());
 
 		// Remember in which order the suggestions were
 		$addresses = array();
@@ -92,13 +109,16 @@ function directory_content(&$a) {
 		$url = $directory['url'] . '/dirsearch';
 	}
 
+	$token = get_config('system','realm_token');
+
+
 	logger('mod_directory: URL = ' . $url, LOGGER_DEBUG);
 
 	$contacts = array();
 
-	if(local_user()) {
+	if(local_channel()) {
 		$x = q("select abook_xchan from abook where abook_channel = %d",
-			intval(local_user())
+			intval(local_channel())
 		);
 		if($x) {
 			foreach($x as $xx)
@@ -106,15 +126,19 @@ function directory_content(&$a) {
 		}
 	}
 
-
-
 	if($url) {
 		// We might want to make the tagadelic count (&kw=) configurable or turn it off completely.
 
 		$numtags = get_config('system','directorytags');
 
-		$kw = ((intval($numtags)) ? $numtags : 24);
+		$kw = ((intval($numtags)) ? $numtags : 50);
 		$query = $url . '?f=&kw=' . $kw . (($safe_mode != 1) ? '&safe=' . $safe_mode : '');
+
+		if($token)
+			$query .= '&t=' . $token;
+
+		if(! $globaldir)
+			$query .= '&hub=' . get_app()->get_hostname();
 
 		if($search)
 			$query .= '&name=' . urlencode($search) . '&keywords=' . urlencode($search);
@@ -127,15 +151,10 @@ function directory_content(&$a) {
 		if(! is_null($pubforums))
 			$query .= '&pubforums=' . intval($pubforums);
 
-		if(! is_null($pubforums))
-			$query .= '&pubforums=' . intval($pubforums);
-
-		$sort_order  = ((x($_REQUEST,'order')) ? $_REQUEST['order'] : '');
+		$sort_order  = ((x($_REQUEST,'order')) ? $_REQUEST['order'] : 'date');
 
 		if($sort_order)
 			$query .= '&order=' . urlencode($sort_order);
-
-
 			
 		if($a->pager['page'] != 1)
 			$query .= '&p=' . $a->pager['page'];
@@ -161,7 +180,7 @@ function directory_content(&$a) {
 						$profile_link = chanlink_url($rr['url']);
 		
 						$pdesc = (($rr['description']) ? $rr['description'] . '<br />' : '');
-						$connect_link = ((local_user()) ? z_root() . '/follow?f=&url=' . urlencode($rr['address']) : ''); 		
+						$connect_link = ((local_channel()) ? z_root() . '/follow?f=&url=' . urlencode($rr['address']) : ''); 		
 
 						// Checking status is disabled ATM until someone checks the performance impact more carefully
 						//$online = remote_online_status($rr['address']);
@@ -189,6 +208,11 @@ function directory_content(&$a) {
 						}
 
 						$page_type = '';
+
+						if($rr['total_ratings'])
+							$total_ratings = sprintf( tt("%d rating", "%d ratings", $rr['total_ratings']), $rr['total_ratings']);
+						else
+							$total_ratings = '';
 
 						$profile = $rr;
 
@@ -219,9 +243,9 @@ function directory_content(&$a) {
 							$karr = explode(' ', $keywords);
 
 							if($karr) {
-								if(local_user()) {
+								if(local_channel()) {
 									$r = q("select keywords from profile where uid = %d and is_default = 1 limit 1",
-										intval(local_user())
+										intval(local_channel())
 									);
 									if($r) {
 										$keywords = str_replace(',',' ', $r[0]['keywords']);
@@ -247,7 +271,7 @@ function directory_content(&$a) {
 							'public_forum' => $rr['public_forum'],
 							'photo' => $rr['photo'],
 							'hash' => $rr['hash'],
-							'alttext' => $rr['name'] . ' ' . $rr['address'],
+							'alttext' => $rr['name'] . ((local_channel() || remote_channel()) ? ' ' . $rr['address'] : ''),
 							'name' => $rr['name'],
 							'details' => $pdesc . $details,
 							'profile' => $profile,
@@ -255,6 +279,9 @@ function directory_content(&$a) {
 							'nickname' => substr($rr['address'],0,strpos($rr['address'],'@')),
 							'location' => $location,
 							'gender'   => $gender,
+							'total_ratings' => $total_ratings,
+							'viewrate' => true,
+							'canrate' => ((local_channel()) ? true : false),
 							'pdesc'	=> $pdesc,
 							'marital'  => $marital,
 							'homepage' => $homepage,
@@ -269,22 +296,27 @@ function directory_content(&$a) {
 							'keywords' => $out,
 							'ignlink' => $suggest ? $a->get_baseurl() . '/directory?ignore=' . $rr['hash'] : '',
 							'ignore_label' => "Don't suggest",
+							'safe' => $safe_mode
 						);
 
 						$arr = array('contact' => $rr, 'entry' => $entry);
 
 						call_hooks('directory_item', $arr);
-			
-						if($sort_order == '' && $suggest) {
-							$entries[$addresses[$rr['address']]] = $arr['entry']; // Use the same indexes as originally to get the best suggestion first
-						}
-						else {
-							$entries[] = $arr['entry'];
-						}
+
 						unset($profile);
 						unset($location);
 
+						if(! $arr['entry']) {
+							continue;
+						}			
+						
+						if($sort_order == '' && $suggest) {
+							$entries[$addresses[$rr['address']]] = $arr['entry']; // Use the same indexes as originally to get the best suggestion first
+						}
 
+						else {
+							$entries[] = $arr['entry'];
+						}
 					}
 
 					ksort($entries); // Sort array by key so that foreach-constructs work as expected
@@ -309,8 +341,9 @@ function directory_content(&$a) {
 						killme();
 					}
 					else {
+						$maxheight = 175;
 
-						$o .= "<script> var page_query = '" . $_GET['q'] . "'; var extra_args = '" . extra_query_args() . "' ; </script>";
+						$o .= "<script> var page_query = '" . $_GET['q'] . "'; var extra_args = '" . extra_query_args() . "' ; divmore_height = " . intval($maxheight) . ";  </script>";
 						$o .= replace_macros($tpl, array(
 							'$search' => $search,
 							'$desc' => t('Find'),

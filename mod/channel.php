@@ -15,7 +15,7 @@ function channel_init(&$a) {
 	if(argc() > 1)
 		$which = argv(1);
 	if(! $which) {
-		if(local_user()) {
+		if(local_channel()) {
 			$channel = $a->get_channel();
 			if($channel && $channel['channel_address'])
 			$which = $channel['channel_address'];
@@ -29,7 +29,7 @@ function channel_init(&$a) {
 	$profile = 0;
 	$channel = $a->get_channel();
 
-	if((local_user()) && (argc() > 2) && (argv(2) === 'view')) {
+	if((local_channel()) && (argc() > 2) && (argv(2) === 'view')) {
 		$which = $channel['channel_address'];
 		$profile = argv(1);		
 	}
@@ -47,16 +47,17 @@ function channel_content(&$a, $update = 0, $load = false) {
 
 	$category = $datequery = $datequery2 = '';
 
-	$mid = $_GET['mid'];
+	$mid = ((x($_REQUEST,'mid')) ? $_REQUEST['mid'] : '');
 
 	$datequery = ((x($_GET,'dend') && is_a_date_arg($_GET['dend'])) ? notags($_GET['dend']) : '');
 	$datequery2 = ((x($_GET,'dbegin') && is_a_date_arg($_GET['dbegin'])) ? notags($_GET['dbegin']) : '');
 
-	if(get_config('system','block_public') && (! get_account_id()) && (! remote_user())) {
+	if(get_config('system','block_public') && (! get_account_id()) && (! remote_channel())) {
 			return login();
 	}
 
 	$category = ((x($_REQUEST,'cat')) ? $_REQUEST['cat'] : '');
+	$hashtags = ((x($_REQUEST,'tag')) ? $_REQUEST['tag'] : '');
 
 	$groups = array();
 
@@ -67,12 +68,12 @@ function channel_content(&$a, $update = 0, $load = false) {
 		$a->profile['profile_uid'] = $a->profile_uid = $update;
 	}
 	else {
-		if($a->profile['profile_uid'] == local_user()) {
+		if($a->profile['profile_uid'] == local_channel()) {
 			nav_set_selected('home');
 		}
 	}
 
-	$is_owner = (((local_user()) && ($a->profile['profile_uid'] == local_user())) ? true : false);
+	$is_owner = (((local_channel()) && ($a->profile['profile_uid'] == local_channel())) ? true : false);
 
 	$channel = $a->get_channel();
 	$observer = $a->get_observer();
@@ -137,7 +138,7 @@ function channel_content(&$a, $update = 0, $load = false) {
 
 	$sql_extra = item_permissions_sql($a->profile['profile_uid'],$remote_contact,$groups);
 
-	if(get_pconfig($a->profile['profile_uid'],'system','channel_list_mode'))
+	if(get_pconfig($a->profile['profile_uid'],'system','channel_list_mode') && (! $mid))
 		$page_mode = 'list';
 	else
 		$page_mode = 'client';
@@ -146,23 +147,21 @@ function channel_content(&$a, $update = 0, $load = false) {
 	if(($update) && (! $load)) {
 		if ($mid) {
 			$r = q("SELECT parent AS item_id from item where mid = '%s' and uid = %d AND item_restrict = 0
-				AND (item_flags &  %d)>0 AND (item_flags & %d)>0 $sql_extra limit 1",
+				AND (item_flags &  %d) > 0 AND item_unseen = 1 $sql_extra limit 1",
 				dbesc($mid),
 				intval($a->profile['profile_uid']),
-				intval(ITEM_WALL),
-				intval(ITEM_UNSEEN)
+				intval(ITEM_WALL)
 			);
 		} else {
 			$r = q("SELECT distinct parent AS `item_id`, created from item
 				left join abook on item.author_xchan = abook.abook_xchan
 				WHERE uid = %d AND item_restrict = 0
-				AND (item_flags &  %d)>0 AND ( item_flags & %d )>0
+				AND (item_flags &  %d) > 0 AND item_unseen = 1
 				AND ((abook.abook_flags & %d) = 0 or abook.abook_flags is null)
 				$sql_extra
 				ORDER BY created DESC",
 				intval($a->profile['profile_uid']),
 				intval(ITEM_WALL),
-				intval(ITEM_UNSEEN),
 				intval(ABOOK_FLAG_BLOCKED)
 			);
 		}
@@ -170,9 +169,11 @@ function channel_content(&$a, $update = 0, $load = false) {
 	}
 	else {
 
-
 		if(x($category)) {
 		        $sql_extra .= protect_sprintf(term_query('item', $category, TERM_CATEGORY));
+		}
+		if(x($hashtags)) {
+		        $sql_extra .= protect_sprintf(term_query('item', $hashtags, TERM_HASHTAG));
 		}
 
 		if($datequery) {
@@ -182,7 +183,7 @@ function channel_content(&$a, $update = 0, $load = false) {
 			$sql_extra2 .= protect_sprintf(sprintf(" AND item.created >= '%s' ", dbesc(datetime_convert(date_default_timezone_get(),'',$datequery2))));
 		}
 
-		$itemspage = get_pconfig(local_user(),'system','itemspage');
+		$itemspage = get_pconfig(local_channel(),'system','itemspage');
 		$a->set_pager_itemspage(((intval($itemspage)) ? $itemspage : 20));
 		$pager_sql = sprintf(" LIMIT %d OFFSET %d ", intval($a->pager['itemspage']), intval($a->pager['start']));
 
@@ -281,7 +282,9 @@ function channel_content(&$a, $update = 0, $load = false) {
 			'$list' => ((x($_REQUEST,'list')) ? intval($_REQUEST['list']) : 0),
 			'$file' => '',
 			'$cats' => (($category) ? $category : ''),
+			'$tags' => (($hashtags) ? $hashtags : ''),
 			'$mid' => $mid,
+			'$verb' => '',
 			'$dend' => $datequery,
 			'$dbegin' => $datequery2
 		));
@@ -312,12 +315,10 @@ function channel_content(&$a, $update = 0, $load = false) {
 	}
 
 	if($is_owner && $update_unseen) {
-		$r = q("UPDATE item SET item_flags = (item_flags & ~%d)
-			WHERE (item_flags & %d) > 0 AND (item_flags & %d) > 0 AND uid = %d $update_unseen",
-			intval(ITEM_UNSEEN),
-			intval(ITEM_UNSEEN),
+		$r = q("UPDATE item SET item_unseen = 0 WHERE item_unseen = 1
+			AND (item_flags & %d) > 0 AND uid = %d $update_unseen",
 			intval(ITEM_WALL),
-			intval(local_user())
+			intval(local_channel())
 		);
 	}
 
@@ -328,8 +329,11 @@ function channel_content(&$a, $update = 0, $load = false) {
 		$o .= conversation($a,$items,'channel',$update,'traditional');
 	}
 
-	if((! $update) || ($_COOKIE['jsAvailable'] != 1))
+	if((! $update) || ($_COOKIE['jsAvailable'] != 1)) {
 		$o .= alt_pager($a,count($items));
+		if ($mid && $items[0]['title'])
+			$a->page['title'] = $items[0]['title'] . " - " . $a->page['title'];
+	}
 
 	if($mid) 
 		$o .= '<div id="content-complete"></div>';

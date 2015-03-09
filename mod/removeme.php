@@ -2,7 +2,7 @@
 
 function removeme_post(&$a) {
 
-	if(! local_user())
+	if(! local_channel())
 		return;
 
 	if(x($_SESSION,'submanage') && intval($_SESSION['submanage']))
@@ -35,7 +35,7 @@ function removeme_post(&$a) {
 
 	$global_remove = intval($_POST['global']);
 
-	channel_remove(local_user(),1 - $global_remove,true);
+	channel_remove(local_channel(),1 - $global_remove,true);
 
 }
 
@@ -43,7 +43,7 @@ function removeme_post(&$a) {
 
 function removeme_content(&$a) {
 
-	if(! local_user())
+	if(! local_channel())
 		goaway(z_root());
 
 	$hash = random_string();
@@ -55,9 +55,9 @@ function removeme_content(&$a) {
 		'$basedir' => $a->get_baseurl(),
 		'$hash' => $hash,
 		'$title' => t('Remove This Channel'),
-		'$desc' => t('This will completely remove this channel from the network. Once this has been done it is not recoverable.'),
+		'$desc' => array(t('WARNING: '), t('This channel will be completely removed from the network. '), t('This action is permanent and can not be undone!')),
 		'$passwd' => t('Please enter your password for verification:'),
-		'$global' => array('global', t('Remove this channel and all its clones from the network'), false, t('By default only the instance of the channel located on this hub will be removed from the network')),
+		'$global' => array('global', t('Remove this channel and all its clones from the network'), false, t('By default only the instance of the channel located on this hub will be removed from the network'), array(t('No'),t('Yes'))),
 		'$submit' => t('Remove Channel')
 	));
 

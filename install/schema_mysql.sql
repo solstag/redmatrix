@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `abook` (
   `abook_their_perms` int(11) NOT NULL DEFAULT '0',
   `abook_closeness` tinyint(3) unsigned NOT NULL DEFAULT '99',
   `abook_rating` int(11) NOT NULL DEFAULT '0',
+  `abook_rating_text` TEXT NOT NULL DEFAULT '',
   `abook_created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `abook_updated` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `abook_connected` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -687,6 +688,7 @@ CREATE TABLE IF NOT EXISTS `item` (
   `item_restrict` int(11) NOT NULL DEFAULT '0',
   `item_flags` int(11) NOT NULL DEFAULT '0',
   `item_private` tinyint(4) NOT NULL DEFAULT '0',
+  `item_unseen` smallint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `uid` (`uid`),
   KEY `parent` (`parent`),
@@ -716,6 +718,7 @@ CREATE TABLE IF NOT EXISTS `item` (
   KEY `public_policy` (`public_policy`),
   KEY `comments_closed` (`comments_closed`),
   KEY `changed` (`changed`),
+  KEY `item_unseen` (`item_unseen`),
   FULLTEXT KEY `title` (`title`),
   FULLTEXT KEY `body` (`body`),
   FULLTEXT KEY `allow_cid` (`allow_cid`),
@@ -937,6 +940,7 @@ CREATE TABLE IF NOT EXISTS `outq` (
   `outq_updated` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `outq_notify` mediumtext NOT NULL,
   `outq_msg` mediumtext NOT NULL,
+  `outq_priority` smallint NOT NULL DEFAULT '0',
   PRIMARY KEY (`outq_hash`),
   KEY `outq_account` (`outq_account`),
   KEY `outq_channel` (`outq_channel`),
@@ -944,7 +948,8 @@ CREATE TABLE IF NOT EXISTS `outq` (
   KEY `outq_created` (`outq_created`),
   KEY `outq_updated` (`outq_updated`),
   KEY `outq_async` (`outq_async`),
-  KEY `outq_delivered` (`outq_delivered`)
+  KEY `outq_delivered` (`outq_delivered`),
+  KEY `outq_priority` (`outq_priority`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -1253,6 +1258,7 @@ CREATE TABLE IF NOT EXISTS `site` (
   `site_sellpage` char(255) NOT NULL DEFAULT '',
   `site_location` char(255) NOT NULL DEFAULT '',
   `site_realm` char(255) NOT NULL DEFAULT '',
+  `site_valid` smallint NOT NULL DEFAULT '0',
   PRIMARY KEY (`site_url`),
   KEY `site_flags` (`site_flags`),
   KEY `site_update` (`site_update`),
@@ -1261,7 +1267,8 @@ CREATE TABLE IF NOT EXISTS `site` (
   KEY `site_access` (`site_access`),
   KEY `site_sellpage` (`site_sellpage`),
   KEY `site_pull` (`site_pull`),
-  KEY `site_realm` (`site_realm`)
+  KEY `site_realm` (`site_realm`),
+  KEY `site_valid` (`site_valid`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -1529,12 +1536,32 @@ CREATE TABLE IF NOT EXISTS `xlink` (
   `xlink_xchan` char(255) NOT NULL DEFAULT '',
   `xlink_link` char(255) NOT NULL DEFAULT '',
   `xlink_rating` int(11) NOT NULL DEFAULT '0',
+  `xlink_rating_text` TEXT NOT NULL DEFAULT '',
   `xlink_updated` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `xlink_static` tinyint(1) NOT NULL DEFAULT '0',
+  `xlink_sig` text NOT NULL DEFAULT '',
   PRIMARY KEY (`xlink_id`),
   KEY `xlink_xchan` (`xlink_xchan`),
   KEY `xlink_link` (`xlink_link`),
   KEY `xlink_updated` (`xlink_updated`),
-  KEY `xlink_rating` (`xlink_rating`)
+  KEY `xlink_rating` (`xlink_rating`),
+  KEY `xlink_static` (`xlink_static`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `xperm`
+--
+
+CREATE TABLE IF NOT EXISTS `xperm` (
+  `xp_id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY ,
+  `xp_client` VARCHAR( 20 ) NOT NULL DEFAULT '',
+  `xp_channel` INT UNSIGNED NOT NULL DEFAULT '0',
+  `xp_perm` VARCHAR( 64 ) NOT NULL DEFAULT '',
+  KEY `xp_client` (`xp_client`),
+  KEY `xp_channel` (`xp_channel`),
+  KEY `xp_perm` (`xp_perm`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

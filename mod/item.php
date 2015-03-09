@@ -26,12 +26,12 @@ function item_post(&$a) {
 	// This will change. Figure out who the observer is and whether or not
 	// they have permission to post here. Else ignore the post.
 
-	if((! local_user()) && (! remote_user()) && (! x($_REQUEST,'commenter')))
+	if((! local_channel()) && (! remote_channel()) && (! x($_REQUEST,'commenter')))
 		return;
 
 	require_once('include/security.php');
 
-	$uid = local_user();
+	$uid = local_channel();
 	$channel = null;
 	$observer = null;
 
@@ -58,6 +58,8 @@ function item_post(&$a) {
 //	 logger('postvars ' . print_r($_REQUEST,true), LOGGER_DATA);
 
 	$api_source = ((x($_REQUEST,'api_source') && $_REQUEST['api_source']) ? true : false);
+
+	$consensus = intval($_REQUEST['consensus']);
 
 	// 'origin' (if non-zero) indicates that this network is where the message originated,
 	// for the purpose of relaying comments to other conversation members. 
@@ -88,6 +90,7 @@ function item_post(&$a) {
 	$pagetitle   = ((x($_REQUEST,'pagetitle'))   ? escape_tags(urlencode($_REQUEST['pagetitle'])) : '');
 	$layout_mid  = ((x($_REQUEST,'layout_mid'))  ? escape_tags($_REQUEST['layout_mid']): '');
 	$plink       = ((x($_REQUEST,'permalink'))   ? escape_tags($_REQUEST['permalink']) : '');
+	$obj_type    = ((x($_REQUEST,'obj_type'))    ? escape_tags($_REQUEST['obj_type'])  : ACTIVITY_OBJ_NOTE);
 
 	// allow API to bulk load a bunch of imported items with sending out a bunch of posts. 
 	$nopush      = ((x($_REQUEST,'nopush'))      ? intval($_REQUEST['nopush'])         : 0);
@@ -131,6 +134,9 @@ function item_post(&$a) {
 
 		if(! x($_REQUEST,'type'))
 			$_REQUEST['type'] = 'net-comment';
+
+		if($obj_type == ACTIVITY_OBJ_POST)
+			$obj_type = ACTIVITY_OBJ_COMMENT;
 
 		if($parent) {
 			$r = q("SELECT * FROM `item` WHERE `id` = %d LIMIT 1",
@@ -449,10 +455,10 @@ function item_post(&$a) {
 	$execflag = false;
 
 	if($mimetype === 'application/x-php') {
-		$z = q("select account_id, account_roles from account left join channel on channel_account_id = account_id where channel_id = %d limit 1",
+		$z = q("select account_id, account_roles, channel_pageflags from account left join channel on channel_account_id = account_id where channel_id = %d limit 1",
 			intval($profile_uid)
 		);
-		if($z && ($z[0]['account_roles'] & ACCOUNT_ROLE_ALLOWCODE)) {
+		if($z && (($z[0]['account_roles'] & ACCOUNT_ROLE_ALLOWCODE) || ($z[0]['channel_pageflags'] & PAGE_ALLOWCODE))) {
 			if($uid && (get_account_id() == $z[0]['account_id'])) {
 				$execflag = true;
 			}
@@ -470,10 +476,12 @@ function item_post(&$a) {
 
 		require_once('include/text.php');			
 		if($uid && $uid == $profile_uid && feature_enabled($uid,'markdown')) {
-			require_once('include/bb2diaspora.php');			
-			$body = diaspora2bb(escape_tags($body),true);
+			require_once('include/bb2diaspora.php');
+			$body = escape_tags($body);
+			$body = preg_replace_callback('/\[share(.*?)\]/ism','share_shield',$body);			
+			$body = diaspora2bb($body,true);
+			$body = preg_replace_callback('/\[share(.*?)\]/ism','share_unshield',$body);
 		}
-
 
 		// BBCODE alert: the following functions assume bbcode input
 		// and will require alternatives for alternative content-types (text/html, text/markdown, text/plain, etc.)
@@ -510,15 +518,17 @@ function item_post(&$a) {
 		 * First protect any url inside certain bbcode tags so we don't double link it.
 		 */
 
+
 		$body = preg_replace_callback('/\[code(.*?)\[\/(code)\]/ism','red_escape_codeblock',$body);
 		$body = preg_replace_callback('/\[url(.*?)\[\/(url)\]/ism','red_escape_codeblock',$body);
 		$body = preg_replace_callback('/\[zrl(.*?)\[\/(zrl)\]/ism','red_escape_codeblock',$body);
 
-		$body = preg_replace_callback("/([^\]\='".'"'."]|^|\#\^)(https?\:\/\/[a-zA-Z0-9\:\/\-\?\&\;\.\=\@\_\~\#\%\$\!\+\,]+)/ism", 'red_zrl_callback', $body);
+		$body = preg_replace_callback("/([^\]\='".'"'."\/]|^|\#\^)(https?\:\/\/[a-zA-Z0-9\:\/\-\?\&\;\.\=\@\_\~\#\%\$\!\+\,]+)/ism", 'red_zrl_callback', $body);
 
 		$body = preg_replace_callback('/\[\$b64zrl(.*?)\[\/(zrl)\]/ism','red_unescape_codeblock',$body);
 		$body = preg_replace_callback('/\[\$b64url(.*?)\[\/(url)\]/ism','red_unescape_codeblock',$body);
 		$body = preg_replace_callback('/\[\$b64code(.*?)\[\/(code)\]/ism','red_unescape_codeblock',$body);
+
 
 		// fix any img tags that should be zmg
 
@@ -573,63 +583,18 @@ function item_post(&$a) {
 		$body = scale_external_images($body,false);
 
 
-		/**
-		 * Look for any tags and linkify them
-		 */
+		// Look for tags and linkify them
+		$results = linkify_tags($a, $body, ($uid) ? $uid : $profile_uid);
 
-		$str_tags = '';
-		$inform   = '';
-		$post_tags = array();
+		if($results) {
 
-		$tags = get_tags($body);
+			// Set permissions based on tag replacements
+			set_linkified_perms($results, $str_contact_allow, $str_group_allow, $profile_uid, $parent_item);
 
-		$tagged = array();
-
-		if(count($tags)) {
-			$first_access_tag = true;
-			foreach($tags as $tag) {
-
-				// If we already tagged 'Robert Johnson', don't try and tag 'Robert'.
-				// Robert Johnson should be first in the $tags array
-
-				$fullnametagged = false;
-				for($x = 0; $x < count($tagged); $x ++) {
-					if(stristr($tagged[$x],$tag . ' ')) {
-						$fullnametagged = true;
-						break;
-					}
-				}
-				if($fullnametagged)
-					continue;
-
-				$success = handle_tag($a, $body, $access_tag, $str_tags, ($uid) ? $uid : $profile_uid , $tag); 
-				logger('handle_tag: ' . print_r($success,true), LOGGER_DATA);
-				if(($access_tag) && (! $parent_item)) {
-					logger('access_tag: ' . $tag . ' ' . print_r($access_tag,true), LOGGER_DATA);
-					if ($first_access_tag && (! get_pconfig($profile_uid,'system','no_private_mention_acl_override'))) {
-
-						// This is a tough call, hence configurable. The issue is that one can type in a @!privacy mention
-						// and also have a default ACL (perhaps from viewing a collection) and could be suprised that the 
-						// privacy mention wasn't the only recipient. So the default is to wipe out the existing ACL if a
-						// private mention is found. This can be over-ridden if you wish private mentions to be in 
-						// addition to the current ACL settings.
-
-						$str_contact_allow = '';
-						$str_group_allow = '';
-						$first_access_tag = false;
-					}
-					if(strpos($access_tag,'cid:') === 0) {
-						$str_contact_allow .= '<' . substr($access_tag,4) . '>';
-						$access_tag = '';	
-					}
-					elseif(strpos($access_tag,'gid:') === 0) {
-						$str_group_allow .= '<' . substr($access_tag,4) . '>';
-						$access_tag = '';	
-					}
-				}
-
+			$post_tags = array();
+			foreach($results as $result) {
+				$success = $result['success'];
 				if($success['replaced']) {
-					$tagged[] = $tag;
 					$post_tags[] = array(
 						'uid'   => $profile_uid, 
 						'type'  => $success['termtype'],
@@ -640,10 +605,6 @@ function item_post(&$a) {
 				}
 			}
 		}
-
-
-//	logger('post_tags: ' . print_r($post_tags,true));
-
 
 		$attachments = '';
 		$match = false;
@@ -683,7 +644,7 @@ function item_post(&$a) {
 		}
 	}
 
-	$item_flags |= ITEM_UNSEEN;
+	$item_unseen =  1;
 	
 	if($post_type === 'wall' || $post_type === 'wall-comment')
 		$item_flags = $item_flags | ITEM_WALL;
@@ -724,13 +685,16 @@ function item_post(&$a) {
 		$item_flags = $item_flags | ITEM_THREAD_TOP;
 	}
 
+	if($consensus)
+		$item_flags |= ITEM_CONSENSUS;
+
 	if ((! $plink) && ($item_flags & ITEM_THREAD_TOP)) {
 		$plink = z_root() . '/channel/' . $channel['channel_address'] . '/?f=&mid=' . $mid;
 	}
 	
 	$datarray['aid']            = $channel['channel_account_id'];
 	$datarray['uid']            = $profile_uid;
-
+	
 	$datarray['owner_xchan']    = (($owner_hash) ? $owner_hash : $owner_xchan['xchan_hash']);
 	$datarray['author_xchan']   = $observer['xchan_hash'];
 	$datarray['created']        = $created;
@@ -748,6 +712,7 @@ function item_post(&$a) {
 	$datarray['location']       = $location;
 	$datarray['coord']          = $coord;
 	$datarray['verb']           = $verb;
+	$datarray['obj_type']       = $obj_type;
 	$datarray['allow_cid']      = $str_contact_allow;
 	$datarray['allow_gid']      = $str_group_allow;
 	$datarray['deny_cid']       = $str_contact_deny;
@@ -764,6 +729,7 @@ function item_post(&$a) {
 	$datarray['term']           = $post_tags;
 	$datarray['plink']          = $plink;
 	$datarray['route']          = $route;
+	$datarray['item_unseen']    = $item_unseen;
 
 	// preview mode - prepare the body for display and send it via json
 
@@ -774,7 +740,7 @@ function item_post(&$a) {
 		$datarray['author'] = $observer;
 		$datarray['attach'] = json_encode($datarray['attach']);
 		$o = conversation($a,array($datarray),'search',false,'preview');
-		logger('preview: ' . $o, LOGGER_DEBUG);
+//		logger('preview: ' . $o, LOGGER_DEBUG);
 		echo json_encode(array('preview' => $o));
 		killme();
 	}
@@ -946,7 +912,7 @@ function item_post(&$a) {
 
 function item_content(&$a) {
 
-	if((! local_user()) && (! remote_user()))
+	if((! local_channel()) && (! remote_channel()))
 		return;
 
 	require_once('include/security.php');
@@ -961,7 +927,7 @@ function item_content(&$a) {
 		if($i) {
 			$can_delete = false;
 			$local_delete = false;
-			if(local_user() && local_user() == $i[0]['uid'])
+			if(local_channel() && local_channel() == $i[0]['uid'])
 				$local_delete = true;
 
 			$ob_hash = get_observer_hash();

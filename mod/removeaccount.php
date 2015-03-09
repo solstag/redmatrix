@@ -2,7 +2,7 @@
 
 function removeaccount_post(&$a) {
 
-	if(! local_user())
+	if(! local_channel())
 		return;
 
 	if(x($_SESSION,'submanage') && intval($_SESSION['submanage']))
@@ -44,7 +44,7 @@ function removeaccount_post(&$a) {
 
 function removeaccount_content(&$a) {
 
-	if(! local_user())
+	if(! local_channel())
 		goaway(z_root());
 
 	$hash = random_string();
@@ -55,7 +55,7 @@ function removeaccount_content(&$a) {
 		'$basedir' => $a->get_baseurl(),
 		'$hash' => $hash,
 		'$title' => t('Remove This Account'),
-		'$desc' => t('This will completely remove this account including all its channels from the network. Once this has been done it is not recoverable.'),
+		'$desc' => array(t('WARNING: '), t('This account and all its channels will be completely removed from the network. '), t('This action is permanent and can not be undone!')),
 		'$passwd' => t('Please enter your password for verification:'),
 		'$global' => array('global', t('Remove this account, all its channels and all its channel clones from the network'), false, t('By default only the instances of the channels located on this hub will be removed from the network')),
 		'$submit' => t('Remove Account')

@@ -6,7 +6,7 @@
 	<ul class="dropdown-menu" role="menu">
 		{{foreach $profile.menu.entries as $e}}
 		<li>
-			<a href="profiles/{{$e.id}}"><img src='{{$e.photo}}'>{{$e.profile_name}}</a>
+			<a href="profiles/{{$e.id}}"><img src='{{$e.photo}}'>{{$e.profile_name}}<div class='clear'></div></a>
 		</li>
 		{{/foreach}}
 		<li><a href="profile_photo" >{{$profile.menu.chg_photo}}</a></li>
@@ -16,7 +16,7 @@
 	{{/if}}
 
 	<div class="fn">{{$profile.name}}{{if $profile.online}} <i class="icon-asterisk online-now" title="{{$profile.online}}"></i>{{/if}}</div>
-		
+	{{if $reddress}}<div class="reddress" oncopy="return false;">{{$profile.reddress}}</div>{{/if}}		
 	{{if $pdesc}}<div class="title">{{$profile.pdesc}}</div>{{/if}}
 	<div id="profile-photo-wrapper"><img class="photo" width="175" height="175" src="{{$profile.photo}}?rev={{$profile.picdate}}" alt="{{$profile.name}}"></div>
 
@@ -50,9 +50,12 @@
 {{if $connect}}
 <a href="{{$connect_url}}" class="rconnect"><i class="icon-plus connect-icon"></i> {{$connect}}</a>
 {{/if}}
-	
+
+{{$rating}}
+
 </div>
 <div id="vcard-end"></div>
+
 
 {{$chanmenu}}
 

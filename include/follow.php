@@ -66,14 +66,15 @@ function new_contact($uid,$url,$channel,$interactive = false, $confirm = false) 
 
 	$my_perms = get_channel_default_perms($uid);
 
-	if($is_red && $j) {
+	$role = get_pconfig($uid,'system','permissions_role');
+	if($role) {
+		$x = get_role_perms($role);
+		if($x['perms_follow'])
+			$my_perms = $x['perms_follow'];
+	}
 
-		$role = get_pconfig($uid,'system','permissions_role');
-		if($role) {
-			$x = get_role_perms($role);
-			if($x['perms_follow'])
-				$my_perms = $x['perms_follow'];
-		}
+
+	if($is_red && $j) {
 
 		logger('follow: ' . $url . ' ' . print_r($j,true), LOGGER_DEBUG);
 
@@ -104,7 +105,6 @@ function new_contact($uid,$url,$channel,$interactive = false, $confirm = false) 
 			return $x;
 
 		$xchan_hash = $x['hash'];
-
 
 		$their_perms = 0;
 
@@ -163,12 +163,6 @@ function new_contact($uid,$url,$channel,$interactive = false, $confirm = false) 
 		if($r) {
 			$xchan_hash = $r[0]['xchan_hash'];
 			$their_perms = 0;
-			$role = get_pconfig($uid,'system','permissions_role');
-			if($role) {
-				$x = get_role_perms($role);
-				if($x['perms_follow'])
-					$my_perms = $x['perms_follow'];
-			}
 		}
 	}
 
@@ -178,7 +172,7 @@ function new_contact($uid,$url,$channel,$interactive = false, $confirm = false) 
 		return $result;
 	}
 
-	if((local_user()) && $uid == local_user()) {
+	if((local_channel()) && $uid == local_channel()) {
 		$aid = get_account_id();
 		$hash = get_observer_hash();
 		$ch = $a->get_channel();
@@ -198,6 +192,7 @@ function new_contact($uid,$url,$channel,$interactive = false, $confirm = false) 
 	}
 
 	if($is_http) {
+
 		if(! intval(get_config('system','feed_contacts'))) {
 			$result['message'] = t('Protocol disabled.');
 			return $result;
@@ -232,10 +227,16 @@ function new_contact($uid,$url,$channel,$interactive = false, $confirm = false) 
 		);		
 	}
 	else {
-		$r = q("insert into abook ( abook_account, abook_channel, abook_xchan, abook_flags, abook_their_perms, abook_my_perms, abook_created, abook_updated )
-			values( %d, %d, '%s', %d, %d, %d, '%s', '%s' ) ",
+
+		$closeness = get_pconfig($uid,'system','new_abook_closeness');
+		if($closeness === false)
+			$closeness = 80;
+
+		$r = q("insert into abook ( abook_account, abook_channel, abook_closeness, abook_xchan, abook_flags, abook_their_perms, abook_my_perms, abook_created, abook_updated )
+			values( %d, %d, %d, '%s', %d, %d, %d, '%s', '%s' ) ",
 			intval($aid),
 			intval($uid),
+			intval($closeness),
 			dbesc($xchan_hash),
 			intval(($is_http) ? ABOOK_FLAG_FEED : 0),
 			intval(($is_http) ? $their_perms|PERMS_R_STREAM|PERMS_A_REPUBLISH : $their_perms),

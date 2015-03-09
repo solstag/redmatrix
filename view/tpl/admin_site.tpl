@@ -1,15 +1,15 @@
 <script>
 	$(function(){
 		
-		$("#cnftheme").fancybox({
+		$("#cnftheme").colorbox({
 			width: 800,
-			autoDimensions: false,
-			onStart: function(){
+			onLoad: function(){
 				var theme = $("#id_theme :selected").val();
 				$("#cnftheme").attr('href',"{{$baseurl}}/admin/themes/"+theme);
 			}, 
 			onComplete: function(){
-				$("div#fancybox-content form").submit(function(e){
+				$(this).colorbox.resize(); 
+				$("#colorbox form").submit(function(e){
 					var url = $(this).attr('action');
 					// can't get .serialize() to work...
 					var data={};
@@ -24,7 +24,7 @@
 					$.post(url, data, function(data) {
 						if(timer) clearTimeout(timer);
 						NavUpdate();
-						$.fancybox.close();
+						$.colorbox.close();
 					})
 					
 					return false;
@@ -55,7 +55,8 @@
 	{{include file="field_input.tpl" field=$register_text}}
 	{{include file="field_select.tpl" field=$register_policy}}
 	{{include file="field_select.tpl" field=$access_policy}}
-	
+	{{include file="field_textarea.tpl" field=$allowed_email}}
+	{{include file="field_textarea.tpl" field=$not_allowed_email}}	
 	<div class="submit"><input type="submit" name="page_site" value="{{$submit}}" /></div>
 
 	<h3>{{$upload}}</h3>

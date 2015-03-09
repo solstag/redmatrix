@@ -7,6 +7,7 @@ CREATE TABLE "abook" (
   "abook_their_perms" bigint NOT NULL DEFAULT '0',
   "abook_closeness" numeric(3)  NOT NULL DEFAULT '99',
   "abook_rating" bigint NOT NULL DEFAULT '0',
+  "abook_rating_text" TEXT NOT NULL DEFAULT '',
   "abook_created" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
   "abook_updated" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
   "abook_connected" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
@@ -527,6 +528,7 @@ CREATE TABLE "item" (
   "item_restrict" bigint NOT NULL DEFAULT '0',
   "item_flags" bigint NOT NULL DEFAULT '0',
   "item_private" numeric(4) NOT NULL DEFAULT '0',
+  "item_unseen" smallint NOT NULL DEFAULT '0',
   "item_search_vector" tsvector,
   PRIMARY KEY ("id")
 );
@@ -558,6 +560,7 @@ create index "item_uid_mid" on item ("mid","uid");
 create index "item_public_policy" on item ("public_policy");
 create index "item_comment_policy" on item ("comment_policy");
 create index "item_layout_mid" on item ("layout_mid");
+create index "item_unseen" on item ("item_unseen");
 
 -- fulltext indexes
 create index "item_search_idx" on  item USING gist("item_search_vector");
@@ -722,6 +725,7 @@ CREATE TABLE "outq" (
   "outq_updated" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
   "outq_notify" text NOT NULL,
   "outq_msg" text NOT NULL,
+  "outq_priority" smallint NOT NULL DEFAULT '0',
   PRIMARY KEY ("outq_hash")
 );
 create index "outq_account" on outq ("outq_account");
@@ -731,6 +735,7 @@ create index "outq_created" on outq ("outq_created");
 create index "outq_updated" on outq ("outq_updated");
 create index "outq_async" on outq ("outq_async");
 create index "outq_delivered" on outq ("outq_delivered");
+create index "outq_priority" on outq ("outq_priority");
 
 CREATE TABLE "pconfig" (
   "id" serial NOT NULL,
@@ -956,6 +961,7 @@ CREATE TABLE "site" (
   "site_sellpage" text NOT NULL DEFAULT '',
   "site_location" text NOT NULL DEFAULT '',
   "site_realm" text NOT NULL DEFAULT '',
+  "site_valid" smallint NOT NULL DEFAULT '0',
   PRIMARY KEY ("site_url")
 );
 create index "site_flags" on site ("site_flags");
@@ -965,6 +971,7 @@ create index "site_register" on site ("site_register");
 create index "site_access" on site ("site_access");
 create index "site_sellpage" on site ("site_sellpage");
 create index "site_realm" on site ("site_realm");
+create index "site_valid" on site ("site_valid");
 
 CREATE TABLE "source" (
   "src_id" serial  NOT NULL,
@@ -1142,13 +1149,27 @@ CREATE TABLE "xlink" (
   "xlink_xchan" text NOT NULL DEFAULT '',
   "xlink_link" text NOT NULL DEFAULT '',
   "xlink_rating" bigint NOT NULL DEFAULT '0',
+  "xlink_rating_text" TEXT NOT NULL DEFAULT '',
   "xlink_updated" timestamp NOT NULL DEFAULT '0001-01-01 00:00:00',
+  "xlink_static" numeric(1) NOT NULL DEFAULT '0',
+  "xlink_sig" text NOT NULL DEFAULT '',
   PRIMARY KEY ("xlink_id")
 );
 create index "xlink_xchan" on xlink ("xlink_xchan");
 create index "xlink_link" on xlink ("xlink_link");
 create index "xlink_updated" on xlink ("xlink_updated");
 create index "xlink_rating" on xlink ("xlink_rating");
+create index "xlink_static" on xlink ("xlink_static");
+CREATE TABLE "xperm" (
+  "xp_id" serial NOT NULL,
+  "xp_client" varchar( 20 ) NOT NULL DEFAULT '',
+  "xp_channel" bigint NOT NULL DEFAULT '0',
+  "xp_perm" varchar( 64 ) NOT NULL DEFAULT '',
+  PRIMARY KEY ("xp_id")
+);
+create index "xp_client" on xperm ("xp_client");
+create index "xp_channel" on xperm ("xp_channel");
+create index "xp_perm" on xperm ("xp_perm");
 CREATE TABLE "xprof" (
   "xprof_hash" text NOT NULL,
   "xprof_age" numeric(3)  NOT NULL DEFAULT '0',

@@ -250,6 +250,34 @@ function parse_url_content(&$a) {
 		}
 	}
 
+	$result = z_fetch_url($url,false,0,array('novalidate' => true, 'nobody' => true));
+	if($result['success']) {
+		$hdrs=array();
+		$h = explode("\n",$result['header']);
+		foreach ($h as $l) {
+			list($k,$v) = array_map("trim", explode(":", trim($l), 2));
+			$hdrs[$k] = $v;
+		}
+		if (array_key_exists('Content-Type', $hdrs))
+			$type = $hdrs['Content-Type'];
+		if($type) {
+			if(in_array($type,array('image/jpeg','image/gif','image/png'))) {
+				$s = $br . '[img]' . $url . '[/img]' . $br;
+				$s = preg_replace_callback('/\[img(.*?)\](.*?)\[\/img\]/ism','red_zrlify_img_callback',$s);
+				echo $s;
+				killme();
+			}
+			if(stripos($type,'video/') !== false) {
+				echo $br . '[video]' . $url . '[/video]' . $br;
+				killme();
+			}
+			if(stripos($type,'audio/') !== false) {
+				echo $br . '[audio]' . $url . '[/audio]' . $br;
+				killme();
+			}
+		}
+	}
+
 	logger('parse_url: ' . $url);
 
 	$template = $br . '#^[url=%s]%s[/url]%s' . $br;
@@ -307,7 +335,14 @@ function parse_url_content(&$a) {
 			$max_images = intval($max_images);
 
 		foreach ($siteinfo["images"] as $imagedata) {
-			$image .= '[img='.$imagedata["width"].'x'.$imagedata["height"].']'.$imagedata["src"].'[/img]' . "\n";
+                        if ($url) {
+                            $image .= sprintf('[url=%s]', $url);
+                        }
+			$image .= '[img='.$imagedata["width"].'x'.$imagedata["height"].']'.$imagedata["src"].'[/img]';
+                        if ($url) {
+                            $image .= '[/url]';
+                        }
+                        $image .= "\n";
 			$total_images ++;
 			if($max_images && $max_images >= $total_images)
 				break;

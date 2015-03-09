@@ -31,7 +31,7 @@ function photo_upload($channel, $observer, $args) {
 		if($newalbum)
 			$album = $newalbum;
 		else
-			$album = datetime_convert('UTC',date_default_timezone_get(),'now', 'Y');
+			$album = datetime_convert('UTC',date_default_timezone_get(),'now', 'Y-m');
 	}
 
 	/**
@@ -53,7 +53,7 @@ function photo_upload($channel, $observer, $args) {
 		$visible = 1;
 	else
 		$visible = 0;
-	
+
 	if(intval($args['not_visible']) || $args['not_visible'] === 'true')
 		$visible = 0;
 
@@ -98,7 +98,6 @@ function photo_upload($channel, $observer, $args) {
 
 		logger('photo_upload: received file: ' . $filename . ' as ' . $src . ' ('. $type . ') ' . $filesize . ' bytes', LOGGER_DEBUG);
 
-	
 		$maximagesize = get_config('system','maximagesize');
 
 		if(($maximagesize) && ($filesize > $maximagesize)) {
@@ -133,7 +132,6 @@ function photo_upload($channel, $observer, $args) {
 		call_hooks('photo_post_end',$ret);
 		return $ret;
 	}
-		
 
 	$ph = photo_factory($imagedata, $type);
 
@@ -185,7 +183,7 @@ function photo_upload($channel, $observer, $args) {
 	$r1 = $ph->save($p);
 	if(! $r1)
 		$errors = true;
-		
+
 	if(($width > 640 || $height > 640) && (! $errors)) {
 		$ph->scaleImage(640);
 		$p['scale'] = 1;
@@ -204,7 +202,6 @@ function photo_upload($channel, $observer, $args) {
 			$errors = true;
 	}
 
-	
 	if($errors) {
 		q("delete from photo where resource_id = '%s' and uid = %d",
 			dbesc($photo_hash),
@@ -220,16 +217,15 @@ function photo_upload($channel, $observer, $args) {
 
 	$width_x_height = $ph->getWidth() . 'x' . $ph->getHeight();
 
-	$basename = basename($filename);
 	$mid = item_message_id();
 
 	// Create item container
 
 	$item_flags = ITEM_WALL|ITEM_ORIGIN|ITEM_THREAD_TOP;
-	$item_restrict = (($visible) ? ITEM_VISIBLE : ITEM_HIDDEN);			
+	$item_restrict = (($visible) ? ITEM_VISIBLE : ITEM_HIDDEN);
 	$title = '';
 	$mid = item_message_id();
-			
+
 	$arr = array();
 
 	$arr['aid']           = $account_id;
@@ -251,15 +247,29 @@ function photo_upload($channel, $observer, $args) {
 
 	$arr['plink']         = z_root() . '/channel/' . $channel['channel_address'] . '/?f=&mid=' . $arr['mid'];
 
-	if ($width_x_height)
-		$tag = '[zmg=' . $width_x_height. ']';
-	else
+	// We should also put a width_x_height on large photos. Left as an exercise for 
+	// devs looking fo simple stuff to fix.
+
+	$larger = feature_enabled($channel['channel_id'], 'large_photos');
+	if($larger) {
 		$tag = '[zmg]';
+		if($r2)
+			$smallest = 1;
+		else
+			$smallest = 0;
+	}
+	else {
+		if ($width_x_height)
+			$tag = '[zmg=' . $width_x_height. ']';
+		else
+			$tag = '[zmg]';
+	}
+
 
 	$arr['body']          = '[zrl=' . z_root() . '/photos/' . $channel['channel_address'] . '/image/' . $photo_hash . ']' 
 				. $tag . z_root() . "/photo/{$photo_hash}-{$smallest}.".$ph->getExt() . '[/zmg]'
 				. '[/zrl]';
-		
+
 	$result = item_store($arr);
 	$item_id = $result['item_id'];
 
@@ -277,15 +287,23 @@ function photo_upload($channel, $observer, $args) {
 	return $ret;
 }
 
-
-
-
-function photos_albums_list($channel,$observer) {
+/**
+ * @brief Returns a list with all photo albums observer is allowed to see.
+ *
+ * Returns an associative array with all albums where observer has permissions.
+ *
+ * @param array $channel
+ * @param array $observer
+ * @return bool|array false if no view_photos permission or an array
+ *   * success (bool)
+ *   * albums (array)
+ */
+function photos_albums_list($channel, $observer) {
 
 	$channel_id     = $channel['channel_id'];
 	$observer_xchan = (($observer) ? $observer['xchan_hash'] : '');
 
-	if(! perm_is_allowed($channel_id,$observer_xchan,'view_photos'))
+	if(! perm_is_allowed($channel_id, $observer_xchan, 'view_photos'))
 		return false;
 
 	// FIXME - create a permissions SQL which works on arbitrary observers and channels, regardless of login or web status
@@ -296,7 +314,6 @@ function photos_albums_list($channel,$observer) {
 		intval($channel_id),
 		intval(PHOTO_NORMAL),
 		intval(PHOTO_PROFILE)
-
 	);
 
 	// add various encodings to the array so we can just loop through and pick them out in a template
@@ -316,8 +333,8 @@ function photos_albums_list($channel,$observer) {
 			$ret['albums'][] = $entry;
 		}
 	}
-	return $ret;
 
+	return $ret;
 }
 
 function photos_album_widget($channelx,$observer,$albums = null) {
@@ -381,17 +398,32 @@ function photos_list_photos($channel,$observer,$album = '') {
 	return $ret;
 }
 
-
-
-function photos_album_exists($channel_id,$album) {
-	$r = q("SELECT id from photo where album = '%s' and uid = %d limit 1",
+/**
+ * @brief Check if given photo album exists in channel.
+ *
+ * @param int $channel_id id of the channel
+ * @param string $album name of the album
+ * @return boolean
+ */
+function photos_album_exists($channel_id, $album) {
+	$r = q("SELECT id FROM photo WHERE album = '%s' AND uid = %d limit 1",
 		dbesc($album),
 		intval($channel_id)
 	);
+
 	return (($r) ? true : false);
 }
 
-function photos_album_rename($channel_id,$oldname,$newname) {
+/**
+ * @brief Renames a photo album in a channel.
+ *
+ * @todo Do we need to check if new album name already exists?
+ * @param int $channel_id id of the channel
+ * @param string $oldname The name of the album to rename
+ * @param string $newname The new name of the album
+ * @return bool|array
+ */
+function photos_album_rename($channel_id, $oldname, $newname) {
 	return q("UPDATE photo SET album = '%s' WHERE album = '%s' AND uid = %d",
 		dbesc($newname),
 		dbesc($oldname),
@@ -423,8 +455,8 @@ function photos_album_get_db_idstr($channel_id,$album,$remote_xchan = '') {
 		$str = implode(',',$arr);
 		return $str;
 	}
-	return false;
 
+	return false;
 }
 
 function photos_create_item($channel, $creator_hash, $photo, $visible = false) {
@@ -432,11 +464,10 @@ function photos_create_item($channel, $creator_hash, $photo, $visible = false) {
 	// Create item container
 
 	$item_flags = ITEM_WALL|ITEM_ORIGIN|ITEM_THREAD_TOP;
-	$item_restrict = (($visible) ? ITEM_VISIBLE : ITEM_HIDDEN);			
+	$item_restrict = (($visible) ? ITEM_VISIBLE : ITEM_HIDDEN);
 
-	$title = '';
 	$mid = item_message_id();
-			
+
 	$arr = array();
 
 	$arr['aid']           = $channel['channel_account_id'];
@@ -456,13 +487,13 @@ function photos_create_item($channel, $creator_hash, $photo, $visible = false) {
 	$arr['deny_gid']      = $photo['deny_gid'];
 
 	$arr['plink']         = z_root() . '/channel/' . $channel['channel_address'] . '/?f=&mid=' . $arr['mid'];
-			
+
 	$arr['body']          = '[zrl=' . z_root() . '/photos/' . $channel['channel_address'] . '/image/' . $photo['resource_id'] . ']' 
 		. '[zmg]' . z_root() . '/photo/' . $photo['resource_id'] . '-' . $photo['scale'] . '[/zmg]' 
 		. '[/zrl]';
-		
+
 	$result = item_store($arr);
 	$item_id = $result['item_id'];
-	return $item_id;
 
+	return $item_id;
 }

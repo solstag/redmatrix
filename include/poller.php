@@ -150,6 +150,7 @@ function poller_run($argv, $argc){
 			call_hooks('cron_weekly',datetime_convert());
 
 
+			z_check_cert();
 
 			require_once('include/hubloc.php');
 			prune_hub_reinstalls();
@@ -157,6 +158,17 @@ function poller_run($argv, $argc){
 			require_once('include/Contact.php');
 			mark_orphan_hubsxchans();
 
+
+			// get rid of really old poco records
+
+			q("delete from xlink where xlink_updated < %s - INTERVAL %s and xlink_static = 0 ",
+				db_utcnow(), db_quoteinterval('14 DAY')
+			);
+
+			$dirmode = intval(get_config('system','directory_mode'));
+			if($dirmode == DIRECTORY_MODE_SECONDARY) {
+				logger('regdir: ' . print_r(z_fetch_url(get_directory_primary() . '/regdir?f=&url=' . z_root() . '&realm=' . get_directory_realm()),true));
+			}
 
 			/**
 			 * End Cron Weekly
@@ -382,7 +394,7 @@ function poller_run($argv, $argc){
 	}
 
 	if($dirmode == DIRECTORY_MODE_SECONDARY || $dirmode == DIRECTORY_MODE_PRIMARY) {
-		$r = q("select distinct ud_addr, updates.* from updates where ( ud_flags & %d ) = 0 and ud_addr != '' and ( ud_last = '%s' OR ud_last > %s - INTERVAL %s ) group by ud_addr ",
+		$r = q("SELECT u.ud_addr, u.ud_id, u.ud_last FROM updates AS u INNER JOIN (SELECT ud_addr, max(ud_id) AS ud_id FROM updates WHERE ( ud_flags & %d ) = 0 AND ud_addr != '' AND ( ud_last = '%s' OR ud_last > %s - INTERVAL %s ) GROUP BY ud_addr) AS s ON s.ud_id = u.ud_id ",
 			intval(UPDATE_FLAGS_UPDATED),
 			dbesc(NULL_DATE),
 			db_utcnow(), db_quoteinterval('7 DAY')
@@ -402,6 +414,8 @@ function poller_run($argv, $argc){
 			}
 		}
 	}
+
+	set_config('system','lastpoll',datetime_convert());
 
 	//All done - clear the lockfile	
 	@unlink($lockfile);

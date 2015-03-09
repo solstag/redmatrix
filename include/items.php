@@ -419,6 +419,9 @@ function post_activity_item($arr) {
 
 	$arr['verb']         = 	((x($arr,'verb')) ? $arr['verb'] : ACTIVITY_POST);
 	$arr['obj_type']     =  ((x($arr,'obj_type')) ? $arr['obj_type'] : ACTIVITY_OBJ_NOTE);
+	if($is_comment)
+		$arr['obj_type'] = ACTIVITY_OBJ_COMMENT;
+
 
 	$arr['allow_cid']    = ((x($arr,'allow_cid')) ? $arr['allow_cid'] : $channel['channel_allow_cid']);
 	$arr['allow_gid']    = ((x($arr,'allow_gid')) ? $arr['allow_gid'] : $channel['channel_allow_gid']);
@@ -834,8 +837,15 @@ function get_item_elements($x) {
 	$arr['item_flags'] = 0;
 
 
+	if(array_key_exists('flags',$x) && in_array('consensus',$x['flags']))
+		$arr['item_flags'] |= ITEM_CONSENSUS;
+
+
+
 	if(array_key_exists('flags',$x) && in_array('deleted',$x['flags']))
-		$arr['item_restrict'] = ITEM_DELETED; 
+		$arr['item_restrict'] |= ITEM_DELETED;
+	if(array_key_exists('flags',$x) && in_array('hidden',$x['flags']))
+		$arr['item_restrict'] |= ITEM_HIDDEN;
 
 	// Here's the deal - the site might be down or whatever but if there's a new person you've never
 	// seen before sending stuff to your stream, we MUST be able to look them up and import their data from their
@@ -1306,10 +1316,14 @@ function encode_item_flags($item) {
 
 	if($item['item_restrict'] & ITEM_DELETED)
 		$ret[] = 'deleted';
+	if($item['item_restrict'] & ITEM_HIDDEN)
+		$ret[] = 'hidden';
 	if($item['item_flags'] & ITEM_THREAD_TOP)
 		$ret[] = 'thread_parent';
 	if($item['item_flags'] & ITEM_NSFW)
 		$ret[] = 'nsfw';
+	if($item['item_flags'] & ITEM_CONSENSUS)
+		$ret[] = 'consensus';
 	if($item['item_private'])
 		$ret[] = 'private';
 	
@@ -1931,7 +1945,7 @@ function item_store($arr,$allow_exec = false) {
 
 
 	$arr['title'] = ((array_key_exists('title',$arr) && strlen($arr['title']))  ? trim($arr['title']) : '');
-	$arr['body']  = ((array_key_exists('body',$arr) && strlen($arr['body']))    ? trim($arr['body'])  : '');
+	$arr['body']  = ((array_key_exists('body',$arr) && strlen($arr['body']))    ? $arr['body']  : '');
 
 	$arr['diaspora_meta'] = ((x($arr,'diaspora_meta')) ? $arr['diaspora_meta']               : '');
 	$arr['allow_cid']     = ((x($arr,'allow_cid'))     ? trim($arr['allow_cid'])             : '');
@@ -1953,7 +1967,7 @@ function item_store($arr,$allow_exec = false) {
 		$arr['body'] = z_input_filter($arr['uid'],$arr['body'],$arr['mimetype']);
 
 
-		if(local_user() && (! $arr['sig'])) {
+		if(local_channel() && (! $arr['sig'])) {
 			$channel = get_app()->get_channel();
 			if($channel['channel_hash'] === $arr['author_xchan']) {
 				$arr['sig'] = base64url_encode(rsa_sign($arr['body'],$channel['channel_prvkey']));
@@ -2015,8 +2029,8 @@ function item_store($arr,$allow_exec = false) {
 	$arr['coord']         = ((x($arr,'coord'))         ? notags(trim($arr['coord']))         : '');
 	$arr['parent_mid']    = ((x($arr,'parent_mid'))    ? notags(trim($arr['parent_mid']))    : '');
 	$arr['thr_parent']    = ((x($arr,'thr_parent'))    ? notags(trim($arr['thr_parent']))    : $arr['parent_mid']);
-	$arr['verb']          = ((x($arr,'verb'))          ? notags(trim($arr['verb']))          : '');
-	$arr['obj_type']      = ((x($arr,'obj_type'))      ? notags(trim($arr['obj_type']))      : '');
+	$arr['verb']          = ((x($arr,'verb'))          ? notags(trim($arr['verb']))          : ACTIVITY_POST);
+	$arr['obj_type']      = ((x($arr,'obj_type'))      ? notags(trim($arr['obj_type']))      : ACTIVITY_OBJ_NOTE);
 	$arr['object']        = ((x($arr,'object'))        ? trim($arr['object'])                : '');
 	$arr['tgt_type']      = ((x($arr,'tgt_type'))      ? notags(trim($arr['tgt_type']))      : '');
 	$arr['target']        = ((x($arr,'target'))        ? trim($arr['target'])                : '');
@@ -2029,11 +2043,10 @@ function item_store($arr,$allow_exec = false) {
 
 	$arr['comment_policy'] = ((x($arr,'comment_policy')) ? notags(trim($arr['comment_policy']))  : 'contacts' );
 	
-	$arr['item_flags'] = $arr['item_flags'] | ITEM_UNSEEN;
+	$arr['item_unseen'] = ((array_key_exists('item_unseen',$arr)) ? intval($arr['item_unseen']) : 1);
 
 	if($arr['comment_policy'] == 'none')
 		$arr['item_flags'] = $arr['item_flags'] | ITEM_NOCOMMENT;
-
 
 
 	// handle time travelers
@@ -2074,12 +2087,24 @@ function item_store($arr,$allow_exec = false) {
 
 		if($r) {
 
+			// in case item_store was killed before the parent's parent attribute got set,
+			// set it now. This happens with some regularity on Dreamhost. This will keep
+			// us from getting notifications for threads that exist but which we can't see.
+
+			if(($r[0]['mid'] === $r[0]['parent_mid']) && (! intval($r[0]['parent']))) {
+				q("update item set parent = id where id = %d",
+					intval($r[0]['id'])
+				);
+			}
+
 			if(comments_are_now_closed($r[0])) {
 				logger('item_store: comments closed');
 				$ret['message'] = 'Comments closed.';
 				return $ret;
 			}
 
+			if($arr['obj_type'] == ACTIVITY_OBJ_NOTE)
+				$arr['obj_type'] = ACTIVITY_OBJ_COMMENT;
 
 			// is the new message multi-level threaded?
 			// even though we don't support it now, preserve the info
@@ -2170,6 +2195,20 @@ function item_store($arr,$allow_exec = false) {
 		unset($arr['term']);
 	}
 
+ 	if(strlen($allow_cid) || strlen($allow_gid) || strlen($deny_cid) || strlen($deny_gid) || strlen($public_policy))
+		$private = 1;
+	else
+		$private = $arr['item_private']; 
+
+	$arr['parent']          = $parent_id;
+	$arr['allow_cid']       = $allow_cid;
+	$arr['allow_gid']       = $allow_gid;
+	$arr['deny_cid']        = $deny_cid;
+	$arr['deny_gid']        = $deny_gid;
+	$arr['public_policy']   = $public_policy;
+	$arr['item_private']    = $private;
+	$arr['comments_closed'] = $comments_closed;
+
 	logger('item_store: ' . print_r($arr,true), LOGGER_DATA);
 
 	dbesc_array($arr);
@@ -2186,7 +2225,6 @@ function item_store($arr,$allow_exec = false) {
 		$arr['mid'],           // already dbesc'd
 		intval($arr['uid'])
 	);
-
 
 	if($r && count($r)) {
 		$current_post = $r[0]['id'];
@@ -2207,40 +2245,14 @@ function item_store($arr,$allow_exec = false) {
 		);
 	}
 
-	if((! $parent_id) || ($arr['parent_mid'] === $arr['mid']))	
-		$parent_id = $current_post;
+	$arr['id'] = $current_post;
 
- 	if(strlen($allow_cid) || strlen($allow_gid) || strlen($deny_cid) || strlen($deny_gid) || strlen($public_policy))
-		$private = 1;
-	else
-		$private = $arr['item_private']; 
+	if(! intval($r[0]['parent'])) {
+		$x = q("update item set parent = id where id = %d",
+			intval($r[0]['id'])
+		);
+	}
 
-	// Set parent id - and also make sure to inherit the parent's ACL's.
-
-	$r = q("UPDATE item SET parent = %d, allow_cid = '%s', allow_gid = '%s',
-		deny_cid = '%s', deny_gid = '%s', public_policy = '%s', item_private = %d, comments_closed = '%s' 
-		WHERE id = %d",
-		intval($parent_id),
-		dbesc($allow_cid),
-		dbesc($allow_gid),
-		dbesc($deny_cid),
-		dbesc($deny_gid),
-		dbesc($public_policy),
-		intval($private),
-		dbesc($comments_closed),
-		intval($current_post)
-	);
-
-	// These are probably redundant now that we've queried the just stored post
-	$arr['id']        = $current_post;
-	$arr['parent']    = $parent_id;
-	$arr['allow_cid'] = $allow_cid;
-	$arr['allow_gid'] = $allow_gid;
-	$arr['deny_cid']  = $deny_cid;
-	$arr['deny_gid']  = $deny_gid;
-	$arr['public_policy']  = $public_policy;
-	$arr['item_private']   = $private;
-	$arr['comments_closed'] = $comments_closed;
 
 	// Store taxonomy
 
@@ -2277,9 +2289,16 @@ function item_store($arr,$allow_exec = false) {
 	);
 
 
-	send_status_notifications($current_post,$arr);
+	// If _creating_ a deleted item, don't propagate it further or send out notifications.
+	// We need to store the item details just in case the delete came in before the original post,
+	// so that we have an item in the DB that's marked deleted and won't store a fresh post 
+	// that isn't aware that we were already told to delete it.
 
-	tag_deliver($arr['uid'],$current_post);
+	if(! ($arr['item_restrict'] & ITEM_DELETED)) {
+		send_status_notifications($current_post,$arr);
+		tag_deliver($arr['uid'],$current_post);
+	}
+
 	$ret['success'] = true;
 	$ret['item_id'] = $current_post;
 
@@ -2322,8 +2341,8 @@ function item_store_update($arr,$allow_exec = false) {
 
 	// override the unseen flag with the original
 
-	if($arr['item_flags'] & ITEM_UNSEEN)
-		$arr['item_flags'] = $arr['item_flags'] ^ ITEM_UNSEEN;
+	if(intval($arr['item_flags']))
+		$arr['item_unseen'] = 0;
 
 	if($orig[0]['item_flags'] & ITEM_VERIFIED)
 		$orig[0]['item_flags'] = $orig[0]['item_flags'] ^ ITEM_VERIFIED;
@@ -2352,7 +2371,7 @@ function item_store_update($arr,$allow_exec = false) {
         // apply the input filter here - if it is obscured it has been filtered already
         $arr['body'] = z_input_filter($arr['uid'],$arr['body'],$arr['mimetype']);
 
-        if(local_user() && (! $arr['sig'])) {
+        if(local_channel() && (! $arr['sig'])) {
             $channel = get_app()->get_channel();
             if($channel['channel_hash'] === $arr['author_xchan']) {
                 $arr['sig'] = base64url_encode(rsa_sign($arr['body'],$channel['channel_prvkey']));
@@ -2441,7 +2460,7 @@ function item_store_update($arr,$allow_exec = false) {
 	$arr['item_private']  = ((array_key_exists('item_private',$arr)) ? intval($arr['item_private']) : $orig[0]['item_private']);
 
 	$arr['title'] = ((array_key_exists('title',$arr) && strlen($arr['title']))  ? trim($arr['title']) : '');
-	$arr['body']  = ((array_key_exists('body',$arr) && strlen($arr['body']))    ? trim($arr['body'])  : '');
+	$arr['body']  = ((array_key_exists('body',$arr) && strlen($arr['body']))    ? $arr['body']  : '');
 	$arr['attach']        = ((x($arr,'attach'))        ? notags(trim($arr['attach']))        : $orig[0]['attach']);
 	$arr['app']           = ((x($arr,'app'))           ? notags(trim($arr['app']))           : $orig[0]['app']);
 //	$arr['item_restrict'] = ((x($arr,'item_restrict')) ? intval($arr['item_restrict'])       : $orig[0]['item_restrict'] );
@@ -2669,7 +2688,7 @@ function tag_deliver($uid,$item_id) {
 	 * Fetch stuff we need - a channel and an item
 	 */
 
-	$u = q("select * from channel where channel_id = %d limit 1",
+	$u = q("select * from channel left join xchan on channel_hash = xchan_hash where channel_id = %d limit 1",
 		intval($uid)
 	);
 	if(! $u)
@@ -2710,6 +2729,9 @@ function tag_deliver($uid,$item_id) {
 			if($obj['id'] !== $u[0]['channel_hash'])
 				$poke_notify = false;
 		}
+		if($item['item_restrict'] & ITEM_DELETED)
+			$poke_notify = false;
+
 
 		$verb = urldecode(substr($item['verb'],strpos($item['verb'],'#')+1));
 		if($poke_notify) {
@@ -2807,7 +2829,7 @@ function tag_deliver($uid,$item_id) {
 	if($terms)
 		logger('tag_deliver: post mentions: ' . print_r($terms,true), LOGGER_DATA);
 
-	$link = normalise_link($a->get_baseurl() . '/channel/' . $u[0]['channel_address']);
+	$link = normalise_link($u[0]['xchan_url']);
 
 	if($terms) {
 		foreach($terms as $term) {
@@ -2849,12 +2871,27 @@ function tag_deliver($uid,$item_id) {
 		if(preg_match($pattern,$body,$matches)) 
 			$tagged = true;
 
-		$pattern = '/@\!?\[zrl\=' . preg_quote($term['url'],'/') . '\]' . preg_quote($term['term'] . '+','/') . '\[\/zrl\]/';
-		if(preg_match($pattern,$body,$matches)) 
-			$plustagged = true;
+		$pattern = '/@\!?\[zrl\=([^\]]*?)\]((?:.(?!\[zrl\=))*?)\+\[\/zrl\]/';
+
+		if(preg_match_all($pattern,$body,$matches,PREG_SET_ORDER)) {
+			$max_forums = get_config('system','max_tagged_forums');
+			if(! $max_forums)
+				$max_forums = 2;
+			$matched_forums = 0;
+			foreach($matches as $match) {
+				$matched_forums ++;
+				if($term['url'] === $match[1] && $term['term'] === $match[2]) {
+					if($matched_forums <= $max_forums) {
+						$plustagged = true;
+						break;
+					}
+					logger('forum ' . $term['term'] . ' exceeded max_tagged_forums - ignoring');
+				}
+			}
+		}
 
 		if(! ($tagged || $plustagged)) {
-			logger('tag_deliver: mention was in a reshare - ignoring');
+			logger('tag_deliver: mention was in a reshare or exceeded max_tagged_forums - ignoring');
 			return;
 		}
 
@@ -2948,7 +2985,7 @@ function tgroup_check($uid,$item) {
 	if(! perm_is_allowed($uid,$item['author_xchan'],'tag_deliver'))
 		return false;
 
-	$u = q("select * from channel where channel_id = %d limit 1",
+	$u = q("select * from channel left join xchan on channel_hash = xchan_hash where channel_id = %d limit 1",
 		intval($uid)
 	);
 
@@ -2960,7 +2997,7 @@ function tgroup_check($uid,$item) {
 	if($terms)
 		logger('tgroup_check: post mentions: ' . print_r($terms,true), LOGGER_DATA);
 
-	$link = normalise_link($a->get_baseurl() . '/channel/' . $u[0]['channel_address']);
+	$link = normalise_link($u[0]['xchan_url']);
 
 	if($terms) {
 		foreach($terms as $term) {
@@ -2971,6 +3008,7 @@ function tgroup_check($uid,$item) {
 		}
 	}				
 
+
 	if($mention) {
 		logger('tgroup_check: mention found for ' . $u[0]['channel_name']);
 	}
@@ -2979,6 +3017,7 @@ function tgroup_check($uid,$item) {
 
 	// At this point we've determined that the person receiving this post was mentioned in it.
 	// Now let's check if this mention was inside a reshare so we don't spam a forum
+	// note: $term has been set to the matching term
 
 
 	$body = $item['body'];
@@ -2990,13 +3029,34 @@ function tgroup_check($uid,$item) {
 
 	$body = preg_replace('/\[share(.*?)\[\/share\]/','',$body);
 
-	$pattern = '/@\!?\[zrl\=' . preg_quote($term['url'],'/') . '\]' . preg_quote($term['term'] . '+','/') . '\[\/zrl\]/';
+	
+//	$pattern = '/@\!?\[zrl\=' . preg_quote($term['url'],'/') . '\]' . preg_quote($term['term'] . '+','/') . '\[\/zrl\]/';
 
-	if(! preg_match($pattern,$body,$matches)) {
-		logger('tgroup_check: mention was in a reshare - ignoring');
-		return false;
+	$pattern = '/@\!?\[zrl\=([^\]]*?)\]((?:.(?!\[zrl\=))*?)\+\[\/zrl\]/';
+
+	$found = false;
+
+	if(preg_match_all($pattern,$body,$matches,PREG_SET_ORDER)) {
+		$max_forums = get_config('system','max_tagged_forums');
+		if(! $max_forums)
+			$max_forums = 2;
+		$matched_forums = 0;
+		foreach($matches as $match) {
+			$matched_forums ++;
+			if($term['url'] === $match[1] && $term['term'] === $match[2]) {
+				if($matched_forums <= $max_forums) {
+					$found = true;
+					break;
+				}
+				logger('forum ' . $term['term'] . ' exceeded max_tagged_forums - ignoring');
+			}
+		}
 	}
 
+	if(! $found) {
+		logger('tgroup_check: mention was in a reshare or exceeded max_tagged_forums - ignoring');
+		return false;
+	}
 
 	return true;
 
@@ -3023,7 +3083,16 @@ function start_delivery_chain($channel,$item,$item_id,$parent) {
 	if((! $private) && $new_public_policy)
 		$private = 1;
 
-	$flag_bits = $item['item_flags'] | ITEM_WALL|ITEM_ORIGIN;
+	$flag_bits = $item['item_flags'] | ITEM_WALL;
+
+	// The message didn't necessarily originate on this site, (we'll honour it if it did),
+	// but the parent post of this thread will be reset as a local post, as it is the top of 
+	// this delivery chain and is coming from this site, regardless of where the original
+	// originated.
+
+	if(! $parent)
+		$flag_bits = $flag_bits | ITEM_ORIGIN;
+
 
 	// unset the nocomment bit if it's there. 
 
@@ -3085,6 +3154,8 @@ function start_delivery_chain($channel,$item,$item_id,$parent) {
 		dbesc($body),
 		intval($item_id)
 	);
+
+
 
 	if($r)
 		proc_run('php','include/notifier.php','tgroup',$item_id);
@@ -3183,7 +3254,7 @@ function mail_store($arr) {
 	$arr['account_id']    = ((x($arr,'account_id'))           ? intval($arr['account_id'])                 : 0);
 	$arr['mid']           = ((x($arr,'mid'))           ? notags(trim($arr['mid']))           : random_string());
 	$arr['from_xchan']    = ((x($arr,'from_xchan'))  ? notags(trim($arr['from_xchan']))  : '');
-	$arr['to_xchan']   = ((x($arr,'to_xchan'))   ? notags(trim($arr['to_xchan']))   : '');
+	$arr['to_xchan']      = ((x($arr,'to_xchan'))   ? notags(trim($arr['to_xchan']))   : '');
 	$arr['created']       = ((x($arr,'created') !== false) ? datetime_convert('UTC','UTC',$arr['created']) : datetime_convert());
 	$arr['expires']       = ((x($arr,'expires') !== false) ? datetime_convert('UTC','UTC',$arr['expires']) : NULL_DATE);
 	$arr['title']         = ((x($arr,'title'))         ? notags(trim($arr['title']))         : '');
@@ -3908,7 +3979,7 @@ function retain_item($id) {
 function drop_items($items) {
 	$uid = 0;
 
-	if(! local_user() && ! remote_user())
+	if(! local_channel() && ! remote_channel())
 		return;
 
 	if(count($items)) {
@@ -3935,7 +4006,7 @@ function drop_items($items) {
 // $stage = 1 => set deleted flag on the item and perform intial notifications
 // $stage = 2 => perform low level delete at a later stage
 
-function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL) {
+function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL,$force = false) {
 
 
 	$a = get_app();
@@ -3955,6 +4026,8 @@ function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL) {
 
 	$item = $r[0];
 
+	$linked_item = (($item['resource_id']) ? true : false);
+
 	$ok_to_delete = false;
 
 	// system deletion
@@ -3962,7 +4035,7 @@ function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL) {
 		$ok_to_delete = true;
 
 	// owner deletion
-	if(local_user() && local_user() == $item['uid'])
+	if(local_channel() && local_channel() == $item['uid'])
 		$ok_to_delete = true;
 
 	// author deletion
@@ -3976,9 +4049,10 @@ function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL) {
 		// hook calls a remote process which loops. We'll delete it properly in a second.
 
 		$r = q("UPDATE item SET item_restrict = ( item_restrict | %d ) WHERE id = %d",
-			intval(ITEM_DELETED),
+			intval(($linked_item && ! $force) ? ITEM_HIDDEN : ITEM_DELETED),
 			intval($item['id'])
 		);
+
 
 		$arr = array('item' => $item, 'interactive' => $interactive, 'stage' => $stage);
 		call_hooks('drop_item', $arr );
@@ -3991,10 +4065,10 @@ function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL) {
 		);
 		if($items) {
 			foreach($items as $i)
-				delete_item_lowlevel($i,$stage);
+				delete_item_lowlevel($i,$stage,$force);
 		}
 		else
-			delete_item_lowlevel($item,$stage);
+			delete_item_lowlevel($item,$stage,$force);
 
 		if(! $interactive)
 			return 1;
@@ -4026,8 +4100,9 @@ function drop_item($id,$interactive = true,$stage = DROPITEM_NORMAL) {
 // It merely destroys all resources associated with an item. 
 // Please do not use without a suitable wrapper.
 
-function delete_item_lowlevel($item,$stage = DROPITEM_NORMAL) {
+function delete_item_lowlevel($item,$stage = DROPITEM_NORMAL,$force = false) {
 
+	$linked_item = (($item['resource_id']) ? true : false);
 
 	switch($stage) {
 		case DROPITEM_PHASE2:
@@ -4043,7 +4118,7 @@ function delete_item_lowlevel($item,$stage = DROPITEM_NORMAL) {
 		case DROPITEM_PHASE1:
 			$r = q("UPDATE item SET item_restrict = ( item_restrict | %d ),
 				changed = '%s', edited = '%s'  WHERE id = %d",
-				intval(ITEM_DELETED),
+				intval(($linked_item && ! $force) ? ITEM_HIDDEN : ITEM_DELETED),
 				dbesc(datetime_convert()),
 				dbesc(datetime_convert()),
 				intval($item['id'])
@@ -4052,13 +4127,24 @@ function delete_item_lowlevel($item,$stage = DROPITEM_NORMAL) {
 
 		case DROPITEM_NORMAL:
 		default:
-			$r = q("UPDATE item SET item_restrict = ( item_restrict | %d ), body = '', title = '',
-				changed = '%s', edited = '%s'  WHERE id = %d",
-				intval(ITEM_DELETED),
-				dbesc(datetime_convert()),
-				dbesc(datetime_convert()),
-				intval($item['id'])
-			);
+			if($linked_item && ! $force) {
+				$r = q("UPDATE item SET item_restrict = ( item_restrict | %d ), 
+					changed = '%s', edited = '%s'  WHERE id = %d",
+					intval(ITEM_HIDDEN),
+					dbesc(datetime_convert()),
+					dbesc(datetime_convert()),
+					intval($item['id'])
+				);
+			}
+			else {
+				$r = q("UPDATE item SET item_restrict = ( item_restrict | %d ), body = '', title = '',
+					changed = '%s', edited = '%s'  WHERE id = %d",
+					intval(ITEM_DELETED),
+					dbesc(datetime_convert()),
+					dbesc(datetime_convert()),
+					intval($item['id'])
+				);
+			}
 			break;
 	}
 
@@ -4069,25 +4155,6 @@ function delete_item_lowlevel($item,$stage = DROPITEM_NORMAL) {
 		intval($item['id']),
 		intval($item['uid'])
 	);
-
-	// If item is a link to a photo/event resource, nuke all the associated photos/events 
-	// This only applies to photos uploaded from the photos page. Photos inserted into a post do not
-	// generate a resource_id and therefore aren't intimately linked to the item. 
-
-	if(strlen($item['resource_id'])) {
-		if($item['resource_type'] === 'event') {
-			q("delete from event where event_hash = '%s' and uid = %d",
-				dbesc($item['resource_id']),
-				intval($item['uid'])
-			);				
-		}
-		elseif($item['resource_type'] === 'photo') {
-			q("DELETE FROM `photo` WHERE `resource_id` = '%s' AND `uid` = %d ",
-				dbesc($item['resource_id']),
-				intval($item['uid'])
-			);
-		}
-	}
 
 
 	// network deletion request. Keep the message structure so that we can deliver delete notifications.
@@ -4111,8 +4178,7 @@ function delete_item_lowlevel($item,$stage = DROPITEM_NORMAL) {
 		intval(TERM_OBJ_POST)
 	);
 
-// FIXME remove notifications for this item
-
+	// FIXME remove notifications for this item
 
 	return true;
 }
@@ -4436,7 +4502,7 @@ function items_fetch($arr,$channel = null,$observer_hash = null,$client_mode = C
 
         $r = q("SELECT abook.*, xchan.* from abook left join xchan on abook_xchan = xchan_hash where abook_id = %d and abook_channel = %d and not ( abook_flags & " . intval(ABOOK_FLAG_BLOCKED) . ")>0 limit 1",
 			intval($arr['cid']),
-			intval(local_user())
+			intval(local_channel())
         );
         if($r) {
             $sql_extra = " AND item.parent IN ( SELECT DISTINCT parent FROM item WHERE true $sql_options AND uid = " . intval($arr['uid']) . " AND ( author_xchan = '" . dbesc($r[0]['abook_xchan']) . "' or owner_xchan = '" . dbesc($r[0]['abook_xchan']) . "' ) and item_restrict = 0 ) ";
@@ -4516,7 +4582,7 @@ function items_fetch($arr,$channel = null,$observer_hash = null,$client_mode = C
     	}
 	}
 
-    $simple_update = (($client_mode & CLIENT_MODE_UPDATE) ? " and ( item.item_flags & " . intval(ITEM_UNSEEN) . " )>0 " : '');
+    $simple_update = (($client_mode & CLIENT_MODE_UPDATE) ? " and ( item.item_unseen = 1 ) " : '');
     if($client_mode & CLIENT_MODE_LOAD)
         $simple_update = '';
 
@@ -4710,4 +4776,51 @@ function item_remove_cid($xchan_hash,$mid,$uid) {
 			intval($uid)
 		);
 	}
+}
+
+// Set item permissions based on results obtained from linkify_tags()
+function set_linkified_perms($linkified, &$str_contact_allow, &$str_group_allow, $profile_uid, $parent_item = false) {
+	$first_access_tag = true;
+
+	foreach($linkified as $x) {
+		$access_tag = $x['access_tag'];
+		if(($access_tag) && (! $parent_item)) {
+			logger('access_tag: ' . $tag . ' ' . print_r($access_tag,true), LOGGER_DATA);
+			if ($first_access_tag && (! get_pconfig($profile_uid,'system','no_private_mention_acl_override'))) {
+
+				// This is a tough call, hence configurable. The issue is that one can type in a @!privacy mention
+				// and also have a default ACL (perhaps from viewing a collection) and could be suprised that the 
+				// privacy mention wasn't the only recipient. So the default is to wipe out the existing ACL if a
+				// private mention is found. This can be over-ridden if you wish private mentions to be in 
+				// addition to the current ACL settings.
+
+				$str_contact_allow = '';
+				$str_group_allow = '';
+				$first_access_tag = false;
+			}
+			if(strpos($access_tag,'cid:') === 0) {
+				$str_contact_allow .= '<' . substr($access_tag,4) . '>';
+				$access_tag = '';	
+			}
+			elseif(strpos($access_tag,'gid:') === 0) {
+				$str_group_allow .= '<' . substr($access_tag,4) . '>';
+				$access_tag = '';	
+			}
+		}
+	}
+}
+
+
+/*
+ * We can't trust ITEM_ORIGIN to tell us if this is a local comment 
+ * which needs to be relayed, because it was misconfigured at one point for several
+ * months and set for some remote items (in alternate delivery chains). This could
+ * cause looping, so use this hackish but accurate method. 
+ */
+
+
+function comment_local_origin($item) {
+	if(stripos($item['mid'],get_app()->get_hostname()) && ($item['parent'] != $item['id']))
+		return true;
+	return false;		
 }

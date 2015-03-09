@@ -6,9 +6,6 @@
 $session_exists = 0;
 $session_expire = 180000;
 
-
-
-
 function new_cookie($time) {
     $old_sid = session_id();
 

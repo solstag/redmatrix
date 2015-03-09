@@ -349,7 +349,7 @@ function setup_content(&$a) {
 				'$siteurl' => array('siteurl', t('Website URL'), z_root(), t('Please use SSL (https) URL if available.')),
 
 				
-				'$timezone' => field_timezone('timezone', t('Please select a default timezone for your website'), $timezone, ''),
+				'$timezone' => array('timezone', t('Please select a default timezone for your website'), $timezone, '', get_timezones()),
 				
 				'$baseurl' => $a->get_baseurl(),
 				
@@ -535,7 +535,7 @@ function check_store(&$checks) {
 	$status = true;
 	$help = "";
 
-	@os_mkdir('store',STORAGE_DEFAULT_PERMISSIONS);
+	@os_mkdir(TEMPLATE_BUILD_PATH,STORAGE_DEFAULT_PERMISSIONS,true);
 
 	if(	!is_writable('store') ) {
 	
@@ -615,7 +615,6 @@ function load_database_rem($v, $i){
 
 
 function load_database($db) {
-	file_put_contents('debug-foo.log', 'Loading schema: '.$db->get_install_script());
 	$str = file_get_contents($db->get_install_script());
 	$arr = explode(';',$str);
 	$errors = false;

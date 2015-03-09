@@ -10,7 +10,7 @@ Worth Repeating: Don't use non-standard SQL. This goes for addons as well. If yo
 To be written
 [code]// Example
 $r = q("SELECT * FROM profile WHERE uid = %d",
-	local_user()
+	local_channel()
 );
 [/code][/li]
 
@@ -56,7 +56,11 @@ $r = q("SELECT * FROM mail WHERE uid=%d AND $sql_extra ORDER BY created DESC LIM
 
 [b]NULL dates[/b]
 [li]To be written
-[code]Example[/code][/li]
+[code]// Example
+$r = q("DELETE FROM mail WHERE expires != '%s' AND expires < %s ",
+	dbesc(NULL_DATE),
+	db_utcnow()
+);[/code][/li]
 
 [b]Storing binary data[/b]
 [li]To be written

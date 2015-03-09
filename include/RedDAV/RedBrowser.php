@@ -76,13 +76,13 @@ class RedBrowser extends DAV\Browser\Plugin {
 	 */
 	public function generateDirectoryIndex($path) {
 		// (owner_id = channel_id) is visitor owner of this directory?
-		$is_owner = ((local_user() && $this->auth->owner_id == local_user()) ? true : false);
+		$is_owner = ((local_channel() && $this->auth->owner_id == local_channel()) ? true : false);
 
 		if ($this->auth->getTimezone())
 			date_default_timezone_set($this->auth->getTimezone());
 
 		require_once('include/conversation.php');
-
+		require_once('include/text.php');
 		if ($this->auth->owner_nick) {
 			$html = profile_tabs(get_app(), (($is_owner) ? true : false), $this->auth->owner_nick);
 		}
@@ -173,6 +173,7 @@ class RedBrowser extends DAV\Browser\Plugin {
 			$type = $this->escapeHTML($type);
 
 			$icon = '';
+
 			if ($this->enableAssets) {
 				$node = $this->server->tree->getNodeForPath(($path ? $path . '/' : '') . $name);
 				foreach (array_reverse($this->iconMap) as $class=>$iconName) {
@@ -182,10 +183,10 @@ class RedBrowser extends DAV\Browser\Plugin {
 					}
 				}
 			}
-	
-			$parentHash = "";
+
+			$parentHash = '';
 			$owner = $this->auth->owner_id;
-			$splitPath = split("/", $fullPath);
+			$splitPath = split('/', $fullPath);
 			if (count($splitPath) > 3) {
 				for ($i = 3; $i < count($splitPath); $i++) {
 					$attachName = urldecode($splitPath[$i]);
@@ -207,8 +208,9 @@ class RedBrowser extends DAV\Browser\Plugin {
 			$ft['displayName'] = $displayName;
 			$ft['type'] = $type;
 			$ft['size'] = $size;
-			$ft['sizeFormatted'] = $this->userReadableSize($size);
+			$ft['sizeFormatted'] = userReadableSize($size);
 			$ft['lastmodified'] = (($lastmodified) ? datetime_convert('UTC', date_default_timezone_get(), $lastmodified) : '');
+			$ft['iconFromType'] = getIconFromType($type);
 
 			$f[] = $ft;
 		}
@@ -222,26 +224,41 @@ class RedBrowser extends DAV\Browser\Plugin {
 		if ($used) {
 			$quotaDesc = t('%1$s used');
 			$quotaDesc = sprintf($quotaDesc,
-				$this->userReadableSize($used));
+				userReadableSize($used));
 		}
 		if ($limit && $used) {
 			$quotaDesc = t('%1$s used of %2$s (%3$s&#37;)');
 			$quotaDesc = sprintf($quotaDesc,
-				$this->userReadableSize($used),
-				$this->userReadableSize($limit),
+				userReadableSize($used),
+				userReadableSize($limit),
 				round($used / $limit, 1));
 		}
 
 		// prepare quota for template
+		$quota = array();
 		$quota['used'] = $used;
 		$quota['limit'] = $limit;
 		$quota['desc'] = $quotaDesc;
 
-		$html .= replace_macros(get_markup_template('cloud_directory.tpl'), array(
+		$output = '';
+		if ($this->enablePost) {
+			$this->server->broadcastEvent('onHTMLActionsPanel', array($parent, &$output));
+		}
+
+		$html .= replace_macros(get_markup_template('cloud_header.tpl'), array(
 				'$header' => t('Files') . ": " . $this->escapeHTML($path) . "/",
+				'$quota' => $quota,
+				'$total' => t('Total'),
+				'$actionspanel' => $output,
+				'$shared' => t('Shared'),
+				'$create' => t('Create'),
+				'$upload' => t('Upload'),
+				'$is_owner' => $is_owner
+			));
+
+		$html .= replace_macros(get_markup_template('cloud_directory.tpl'), array(
 				'$parentpath' => $parentpath,
 				'$entries' => $f,
-				'$quota' => $quota,
 				'$name' => t('Name'),
 				'$type' => t('Type'),
 				'$size' => t('Size'),
@@ -249,41 +266,21 @@ class RedBrowser extends DAV\Browser\Plugin {
 				'$parent' => t('parent'),
 				'$edit' => t('Edit'),
 				'$delete' => t('Delete'),
-				'$total' => t('Total')		
+				'$nick' => $this->auth->getCurrentUser()
 			));
 
-		$output = '';
-		if ($this->enablePost) {
-			$this->server->broadcastEvent('onHTMLActionsPanel', array($parent, &$output));
-		}
-		$html .= $output;
-	
 		get_app()->page['content'] = $html;
 		load_pdl(get_app());
-		construct_page(get_app());
-	}
 
-	/**
-	 * @brief Returns a human readable formatted string for filesizes.
-	 *
-	 * Don't we need such a functionality in other places, too?
-	 *
-	 * @param int $size filesize in bytes
-	 * @return string
-	 */
-	function userReadableSize($size) {
-		$ret = "";
-		if (is_numeric($size)) {
-			$incr = 0;
-			$k = 1024;
-			$unit = array('bytes', 'KB', 'MB', 'GB', 'TB', 'PB');
-			while (($size / $k) >= 1){
-				$incr++;
-				$size = round($size / $k, 2);
+		$theme_info_file = "view/theme/" . current_theme() . "/php/theme.php";
+		if (file_exists($theme_info_file)){
+			require_once($theme_info_file);
+			if (function_exists(str_replace('-', '_', current_theme()) . '_init')) {
+				$func = str_replace('-', '_', current_theme()) . '_init';
+				$func(get_app());
 			}
-			$ret = $size . " " . $unit[$incr];
 		}
-		return $ret;
+		construct_page(get_app());
 	}
 
 	/**
@@ -334,6 +331,7 @@ class RedBrowser extends DAV\Browser\Plugin {
 	 *  The name of the attachment
 	 * @return string
 	 */
+
 	protected function findAttachHash($owner, $parentHash, $attachName) {
 		$r = q("SELECT hash FROM attach WHERE uid = %d AND folder = '%s' AND filename = '%s' ORDER BY edited DESC LIMIT 1",
 			intval($owner),

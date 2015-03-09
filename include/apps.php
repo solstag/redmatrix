@@ -83,35 +83,37 @@ function parse_app_description($f) {
 		$ret['target'] = str_replace(array('\'','"'),array('&#39;','&dquot;'),$ret['target']);
 
 	if(array_key_exists('requires',$ret)) {
-		$require = trim(strtolower($ret['requires']));
-		switch($require) {
-			case 'nologin':
-				if(local_user())
-					unset($ret);
-				break;
-			case 'admin':
-				if(! is_site_admin())
-					unset($ret);
-				break;
-			case 'local_user':
-				if(! local_user())
-					unset($ret);
-				break;
-			case 'public_profile':
-				if(! is_public_profile())
-					unset($ret);
-				break;
-			case 'observer':
-				if(! $observer)
-					unset($ret);
-				break;
-			default:
-				if(! local_user() && feature_enabled(local_user(),$require))
-					unset($ret);
-				break;
+		$requires = explode(',',$ret['requires']);
+		foreach($requires as $require) {
+			$require = trim(strtolower($require));
+			switch($require) {
+				case 'nologin':
+					if(local_channel())
+						unset($ret);
+					break;
+				case 'admin':
+					if(! is_site_admin())
+						unset($ret);
+					break;
+				case 'local_channel':
+					if(! local_channel())
+						unset($ret);
+					break;
+				case 'public_profile':
+					if(! is_public_profile())
+						unset($ret);
+					break;
+				case 'observer':
+					if(! $observer)
+						unset($ret);
+					break;
+				default:
+					if(! (local_channel() && feature_enabled(local_channel(),$require)))
+						unset($ret);
+					break;
 
+			}
 		}
-//		logger('require: ' . print_r($ret,true));
 	}
 	if($ret) {
 		translate_system_apps($ret);
@@ -189,34 +191,37 @@ function app_render($papp,$mode = 'view') {
 			$papp['desc'] = str_replace(array('\'','"'),array('&#39;','&dquot;'),$papp['desc']);
 
 		if($k === 'requires') {
-			$require = trim(strtolower($v));
-			switch($require) {
-				case 'nologin':
-					if(local_user())
-						return '';
-					break;
-				case 'admin':
-					if(! is_site_admin())
-						return '';
-					break;
-				case 'local_user':
-					if(! local_user())
-						return '';
-					break;
-				case 'public_profile':
-					if(! is_public_profile())
-						return '';
-					break;
-				case 'observer':
-					$observer = get_app()->get_observer();
-					if(! $observer)
-						return '';
-					break;
-				default:
-					if(! local_user() && feature_enabled(local_user(),$require))
-						return '';
-					break;
+			$requires = explode(',',$v);
+			foreach($requires as $require) {
+				$require = trim(strtolower($require));
+				switch($require) {
+					case 'nologin':
+						if(local_channel())
+							return '';
+						break;
+					case 'admin':
+						if(! is_site_admin())
+							return '';
+						break;
+					case 'local_channel':
+						if(! local_channel())
+							return '';
+						break;
+					case 'public_profile':
+						if(! is_public_profile())
+							return '';
+						break;
+					case 'observer':
+						$observer = get_app()->get_observer();
+						if(! $observer)
+							return '';
+						break;
+					default:
+						if(! (local_channel() && feature_enabled(local_channel(),$require)))
+							return '';
+						break;
 
+				}
 			}
 
 		}
@@ -224,11 +229,11 @@ function app_render($papp,$mode = 'view') {
 
 	$hosturl = '';
 
-	if(local_user()) {
-		$installed = app_installed(local_user(),$papp);
+	if(local_channel()) {
+		$installed = app_installed(local_channel(),$papp);
 		$hosturl = z_root() . '/';
 	}
-	elseif(remote_user()) {
+	elseif(remote_channel()) {
 		$observer = get_app()->get_observer();
 		if($observer && $observer['xchan_network'] === 'zot') {
 			// some folks might have xchan_url redirected offsite, use the connurl
@@ -246,8 +251,8 @@ function app_render($papp,$mode = 'view') {
 		'$hosturl' => $hosturl,
 		'$purchase' => (($papp['page'] && (! $installed)) ? t('Purchase') : ''),
 		'$install' => (($hosturl && $mode == 'view') ? $install_action : ''),
-		'$edit' => ((local_user() && $installed && $mode == 'edit') ? t('Edit') : ''),
-		'$delete' => ((local_user() && $installed && $mode == 'edit') ? t('Delete') : '')
+		'$edit' => ((local_channel() && $installed && $mode == 'edit') ? t('Edit') : ''),
+		'$delete' => ((local_channel() && $installed && $mode == 'edit') ? t('Delete') : '')
 	));
 }
 

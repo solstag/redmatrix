@@ -116,21 +116,10 @@ function diaspora_mention_callback($matches) {
 function diaspora2bb($s,$use_zrl = false) {
 
 
+	$s = str_replace("&#xD;","\r",$s);
 	$s = str_replace("&#xD;\n&gt;","",$s);
 
 	$s = html_entity_decode($s,ENT_COMPAT,'UTF-8');
-
-	// Too many new lines. So deactivated the following line
-	// $s = str_replace("\r","\n",$s);
-	// Simply remove cr.
-	$s = str_replace("\r","",$s);
-
-	// <br/> is invalid. Replace it with the valid expression
-	$s = str_replace("<br/>","<br />",$s);
-	$s = str_replace("\n","<br />",$s);
-
-
-//	$s = preg_replace('/\@\{(.+?)\; (.+?)\@(.+?)\}/','@[url=https://$3/u/$2]$1[/url]',$s);
 
 	// first try plustags
 
@@ -143,16 +132,13 @@ function diaspora2bb($s,$use_zrl = false) {
 	// This seems to work
 	$s = preg_replace('/\#([^\s\#])/','&#35;$1',$s);
 
-	$s = preg_replace_callback('/\[share(.*?)\]/ism','share_shield',$s);
-
 	$s = Markdown($s);
 
+	$s = str_replace("\r","",$s);
+
 	$s = str_replace('&#35;','#',$s);
-// we seem to have double linebreaks
-//	$s = str_replace("\n",'<br />',$s);
 
 	$s = html2bbcode($s);
-//	$s = str_replace('&#42;','*',$s);
 
 	// protect the recycle symbol from turning into a tag, but without unescaping angles and naked ampersands
 	$s = str_replace('&#x2672;',html_entity_decode('&#x2672;',ENT_QUOTES,'UTF-8'),$s);
@@ -174,10 +160,6 @@ function diaspora2bb($s,$use_zrl = false) {
 	$s = bb_tag_preg_replace("/\[url\=https?:\/\/vimeo.com\/([0-9]+)\](.*?)\[\/url\]/ism",'[vimeo]$1[/vimeo]','url',$s);
 	// remove duplicate adjacent code tags
 	$s = preg_replace("/(\[code\])+(.*?)(\[\/code\])+/ism","[code]$2[/code]", $s);
-
-
-	$s = preg_replace_callback('/\[share(.*?)\]/ism','share_unshield',$s);
-
 
 	// Don't show link to full picture (until it is fixed)
 	$s = scale_external_images($s, false);
@@ -289,22 +271,6 @@ function bb2diaspora_itemwallwall(&$item) {
 			. $item['body'];
 	}
 
-	// We have to do something similar for wall-to-wall comments. ITEM_WALL|ITEM_ORIGIN indicates that it was posted on this site. 
-	// Regular matrix comments may have one of these bits set, but not both.
-
-	// Update: this is getting triggered way too often and unnecessarily. Commenting out until we find a better solution.
-	// It's not an easy problem. For now we'll live with the mis-attributions, as wall to wall comments are much less frequent
-	// than wall-to-wall posts. 
-
-//	if(($item['mid'] != $item['parent_mid']) && ($item['author_xchan'] != $item['owner_xchan']) && (($item['item_flags'] & (ITEM_WALL|ITEM_ORIGIN)) == (ITEM_WALL|ITEM_ORIGIN)) && (is_array($item['author'])) && $item['author']['xchan_url'] && $item['author']['xchan_name'] && $item['author']['xchan_photo_m']) {
-//		logger('bb2diaspora_itemwallwall: wall to wall comment',LOGGER_DEBUG);
-		// post will come across with the owner's identity. Throw a preamble onto the post to indicate the true author.
-//		$item['body'] = "\n\n" 
-//			. '[img]' . $item['author']['xchan_photo_m'] . '[/img]' 
-//			. '[url=' . $item['author']['xchan_url'] . ']' . $item['author']['xchan_name'] . '[/url]' . "\n\n" 
-//			. $item['body'];
-//	}
-
 	// $item['author'] might cause a surprise further down the line if it wasn't expected to be here.
  
 	if(! $author_exists)
@@ -329,8 +295,6 @@ function bb2diaspora_itembody($item,$force_update = false) {
 				logger('bb2diaspora_itembody: cached ');
 				$newitem = $item;
 				$newitem['body'] = $meta['body'];
-// this won't work - the post is now in markdown
-//				bb2diaspora_itemwallwall($newitem);
 				return $newitem['body'];
 			}
 		}
@@ -351,7 +315,8 @@ function bb2diaspora_itembody($item,$force_update = false) {
 
 	bb2diaspora_itemwallwall($newitem);
 
-	$body = preg_replace('/\#\^http/i', 'http', $newitem['body']);
+	$title = $newitem['title'];
+	$body  = preg_replace('/\#\^http/i', 'http', $newitem['body']);
 
 	// protect tags and mentions from hijacking
 

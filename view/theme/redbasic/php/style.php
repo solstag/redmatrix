@@ -59,15 +59,23 @@ if(! $a->install) {
 			$schemefile = 'view/theme/redbasic/schema/' . $schema . '.php';
 			require_once ($schemefile);
 		}
+		if(file_exists('view/theme/redbasic/schema/' . $schema . '.css')) {
+			$schemecss = file_get_contents('view/theme/redbasic/schema/' . $schema . '.css');
+		}
+
 	}
-		// If we haven't got a schema, load the default.  We shouldn't touch this - we
-		// should leave it for admins to define for themselves.
-			if (! $schema) {
-			      if(file_exists('view/theme/redbasic/schema/default.php')) {
-				    $schemefile = 'view/theme/redbasic/schema/default.php';
-				    require_once ($schemefile);
-				    }
-			}
+
+	// If we haven't got a schema, load the default.  We shouldn't touch this - we
+	// should leave it for admins to define for themselves.
+	if (! $schema) {
+		if(file_exists('view/theme/redbasic/schema/default.php')) {
+			$schemefile = 'view/theme/redbasic/schema/default.php';
+			require_once ($schemefile);
+		}
+		if(file_exists('view/theme/redbasic/schema/default.css')) {
+			$schemecss = file_get_contents('view/theme/redbasic/schema/default.css');
+		}
+	}
 		
 		
 //Set some defaults - we have to do this after pulling owner settings, and we have to check for each setting
@@ -145,8 +153,6 @@ if(! $a->install) {
 		$selected_active_colour = "#444";
 	if (! $selected_active_deco)
 		$selected_active_deco = "none";
-	if (! $widget_brdrcolour)
-		$widget_brdrcolour = "rgba(238,238,238,0.8)";
 	if (! $blockquote_colour)
 		$blockquote_colour = "#4d4d4d";
 	if (! $blockquote_bgcolour)
@@ -272,18 +278,10 @@ if(! $a->install) {
       $advperm_gradientcol = "#E8E8E8";
    if(! $cal_bgcolour)
 		$cal_bgcolour = "#FCF8E3";
+   if(! $chat_txtbgcol)
+		$chat_txtbgcol = "#EEE";
    if(! $fancybox_bgcolour)
-      $fancybox_bgcolour = "#FFF";
-	if (!$comment_padding)
-		$comment_padding="0px";	
-	if (!$comment_border_left)
-		$comment_border_left="3px solid";
-	if (!$comment_border_right)
-		$comment_border_right="0px solid";	
-	if (!$comment_border_top)
-		$comment_border_top="0px solid";		
-	if (!$comment_border_bottom)
-		$comment_border_bottom="0px solid";
+      $fancybox_bgcolour = "#FFFFFF";
 	if (!$admintable_hoverbgcol)
 		$admintable_hoverbgcol="#BBC7D7";
 	if (!$dirpopup_txtcol)
@@ -344,7 +342,6 @@ $options = array (
 '$selected_active_colour' => $selected_active_colour,
 '$selected_active_deco' => $selected_active_deco,
 '$body_font_size' => $body_font_size,
-'$widget_brdrcolour' => $widget_brdrcolour,
 '$blockquote_colour' => $blockquote_colour,
 '$blockquote_bgcolour' => $blockquote_bgcolour,
 '$blockquote_bordercolour' => $blockquote_bordercolour,
@@ -409,6 +406,7 @@ $options = array (
 '$advperm_bordercol' => $advperm_bordercol,
 '$advperm_gradientcol' => $advperm_gradientcol,
 '$cal_bgcolour' => $cal_bgcolour,
+'$chat_txtbgcol' => $chat_txtbgcol,
 '$fancybox_bgcolour' => $fancybox_bgcolour,
 '$pmenu_top' => $pmenu_top,
 '$pmenu_reply' => $pmenu_reply,
@@ -416,10 +414,6 @@ $options = array (
 '$comment_indent' => $comment_indent,
 '$body_width' => $body_width,
 '$comment_padding' => $comment_padding,
-'$comment_border_left' => $comment_border_left,
-'$comment_border_right' => $comment_border_right,
-'$comment_border_top' => $comment_border_top,
-'$comment_border_bottom' => $comment_border_bottom,
 '$admintable_hoverbgcol' => $admintable_hoverbgcol,
 '$dirpopup_txtcol' => $dirpopup_txtcol,
 '$dirpopup_linkcol' => $dirpopup_linkcol,
@@ -438,4 +432,8 @@ if($narrow_navbar && file_exists('view/theme/redbasic/css/narrow_navbar.css')) {
 if($converse_center && file_exists('view/theme/redbasic/css/converse_center.css')) {
 	$x = file_get_contents('view/theme/redbasic/css/converse_center.css');
 	echo str_replace(array_keys($options), array_values($options), $x);
-} 
+}
+
+if($schemecss) {
+	echo $schemecss;
+}

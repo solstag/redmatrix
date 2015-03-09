@@ -32,26 +32,6 @@ nav .dropdown-menu {
 	margin-top: 0px;
 }
 
-nav .dropdown-menu .contactname {
-	padding-top: 2px;
-	font-weight: bold;
-	display: block;
-}
-
-nav .dropdown-menu img {
-	float: left;
-	margin-right: 5px;
-	width: 32px;
-	height: 32px;
-}
-
-nav .dropdown-menu li a {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	line-height: 1em;
-	padding: 5px 10px;
-}
-
 nav .navbar-collapse .navbar-left {
 	float: left;
 }
@@ -67,9 +47,17 @@ nav .navbar-toggle {
 /* nav overrides end */
 
 .dropdown-menu img {
+	float: left;
 	width: 32px;
 	height: 32px;
 	margin-right: 5px;
+}
+
+.dropdown-menu li a {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1em;
+	padding: 5px 10px;
 }
 
 .nav-tabs.nav-justified > li {
@@ -79,3 +67,11 @@ nav .navbar-toggle {
 code {
 	white-space: normal;
 }
+
+.form-control {
+	font-size: unset;
+}
+
+/* Bootstrap assumes that checkboxes are on the left of labels, while it's usually the opposite in Red */
+.field.checkbox input[type="checkbox"] { margin-left: 0px; }
+.field.checkbox label { padding-left: 0px; font-weight: 700}

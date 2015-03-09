@@ -53,11 +53,13 @@ Zot ist das großartige neue Kommunikationsprotokoll, das extra für die Red-Mat
 [zrl=[baseurl]/help/Creating-Templates]Vorlagen erstellen mit Comanche[/zrl]
 [zrl=[baseurl]/help/Widgets]Widgets, die Teil der Standardinstallation sind[/zrl]
 [zrl=[baseurl]/help/plugins]Plugins[/zrl]
+[zrl=[baseurl]/help/doco]Selbst Dokumentation beisteuern[/zrl]
 [zrl=[baseurl]/help/DerivedTheme1]Einen Theme basierend auf einem anderen erstellen[/zrl]
 [zrl=[baseurl]/help/schema_development]Schemata[/zrl]
 [zrl=[baseurl]/help/Translations]Übersetzungen[/zrl]
 [zrl=[baseurl]/help/developers]Entwickler[/zrl]
 [zrl=[baseurl]/help/intro_for_developers]Einführung für Entwickler[/zrl]
+[zrl=[baseurl]/help/database]Datenbank-Schema[/zrl]
 [zrl=[baseurl]/help/api_functions]API-Funktionen[/zrl]
 [zrl=[baseurl]/help/api_posting]Mit der API einen Beitrag erstellen[/zrl]
 [zrl=[baseurl]/help/developer_function_primer]Übersicht der wichtigsten Red-Funktionen[/zrl]
@@ -66,6 +68,7 @@ Zot ist das großartige neue Kommunikationsprotokoll, das extra für die Red-Mat
 [zrl=[baseurl]/help/to_do_code]To-Do-Liste für Entwickler[/zrl]
 [zrl=[baseurl]/help/roadmap]Roadmap für Version 3[/zrl]
 [zrl=[baseurl]/help/git_for_non_developers]Git für Nicht-Entwickler[/zrl]
+[zrl=[baseurl]/help/dev_beginner]Schritt-für-Schritt-Einführung für neue Entwickler[/zrl]
 
 [size=large][b]Häufig gestellte Fragen für Entwickler[/b][/size]
 [zrl=[baseurl]/help/faq_developers]FAQ für Entwickler[/zrl]
@@ -75,7 +78,12 @@ Zot ist das großartige neue Kommunikationsprotokoll, das extra für die Red-Mat
 [url=https://github.com/friendica/red]Haupt-Website[/url]
 [url=https://github.com/friendica/red-addons]Addons-Website[/url]
 [url=https://zothub.com/channel/one]Entwickler-Kanal[/url]
+[url=https://federated.social/channel/postgres]Postgres-spezifischer Admin-Support-Kanal[/url]
+
 
 [url=[baseurl]/help/credits]RedMatrix Credits[/url]
+
 [size=large][b]Über diesen Red-Server[/b][/size]
+[zrl=[baseurl]/help/TermsOfService]Nutzungsbedingungen dieses Red-Servers[/zrl]
 [zrl=[baseurl]/siteinfo]Informationen zu diesem Server und der Red-Version[/zrl]
+[zrl=[baseurl]/siteinfo/json]Detaillierte technische Informationen zu diesem Server im JSON-Format[/zrl]

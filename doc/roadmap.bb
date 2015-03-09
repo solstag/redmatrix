@@ -2,6 +2,9 @@
 
 Roadmap for Redmatrix V3
 
+Crypto
+	Convert E2EE to dynamic loading (on demand) using jQuery.getScript() [or other methods] to only load encryption libs when you require them. This should also support multiple encryption libraries (e.g. SJCL, others) triggered from the choice of algorithm and remain pluggable.
+ 
 
 Subscriptions and business models
 	Build enough into core(/addons) to generate income (or at least try and cover costs) out of the box
@@ -18,9 +21,6 @@ Migration tools
 	Friendica importer
 	Diaspora importer
 
-Poco reputation
-	Make it happen
-	
 Webpage design UI improvements
 	If practical, separate "conversation" sub-themes from overall themes so one can choose different conversation and content layouts within a base theme. 
 	Make webpage building easy, with point-n-click selectors to build PDLs
@@ -36,13 +36,17 @@ Lists
 	Create a list object to contain arbitrary things for personal use
 
 Events
-	Recurring events and participation (RSVP)
+	Recurring events
 
 Zot
 	Provide a way to sync web resources. This could be built on DAV except for preserving resource naming (guids) instead of filenames. 
 
 API extensions
 	More, more, more.
+
+Evangelism
+	More documentation. More, more, more.
+	Libzot
 
 DNS abstraction for V3
 	Allow a channel to live in an arbitrary "DNS" namespace, for instance "mike@core.redmatrix". Use our directories and zot to find the actual DNS location via redirection. This could potentially allow hubs to be hidden behind tor or alt-roots and accessible only via the matrix.

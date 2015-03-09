@@ -9,6 +9,10 @@
 			if(obj.value == aStr['comment']) {
 				obj.value = '';
 				$("#comment-edit-text-" + id).addClass("comment-edit-text-full").removeClass("comment-edit-text-empty");
+				// Choose an arbitrary tab index that's greater than what we're using in jot (3 of them)
+				// The submit button gets tabindex + 1
+				$("#comment-edit-text-" + id).attr('tabindex','9');
+				$("#comment-edit-submit-" + id).attr('tabindex','10');
 				$("#comment-tools-" + id).show();
 			}
 		};
@@ -25,6 +29,8 @@
 			if(obj.value == '') {
 			obj.value = aStr['comment'];
 				$("#comment-edit-text-" + id).removeClass("comment-edit-text-full").addClass("comment-edit-text-empty");
+				$("#comment-edit-text-" + id).removeAttr('tabindex');
+				$("#comment-edit-submit-" + id).removeAttr('tabindex');
 				$("#comment-tools-" + id).hide();
 			}
 		};
@@ -112,6 +118,34 @@
 		return true;
 	}
 
+	function insertCommentURL(comment,id) {
+
+		reply = prompt(aStr['linkurl']);
+        if(reply && reply.length) {
+            reply = bin2hex(reply);
+			$('body').css('cursor', 'wait');
+            $.get('parse_url?binurl=' + reply, function(data) {
+				var tmpStr = $("#comment-edit-text-" + id).val();
+				if(tmpStr == comment) {
+					tmpStr = "";
+					$("#comment-edit-text-" + id).addClass("comment-edit-text-full");
+					$("#comment-edit-text-" + id).removeClass("comment-edit-text-empty");
+					openMenu("comment-tools-" + id);
+					$("#comment-edit-text-" + id).val(tmpStr);
+				}
+
+				textarea = document.getElementById("comment-edit-text-" +id);
+				textarea.value = textarea.value + data;
+				$('body').css('cursor', 'auto');
+
+            });
+        }
+		return true;
+	}
+
+
+
+
 	function viewsrc(id) {
 		$.colorbox({href: 'viewsrc/' + id, maxWidth: '80%', maxHeight: '80%' });
 	}
@@ -135,11 +169,13 @@
 
 	function showHideComments(id) {
 		if( $('#collapsed-comments-' + id).is(':visible')) {
+			$('#collapsed-comments-' + id + ' .autotime').timeago('dispose');
 			$('#collapsed-comments-' + id).slideUp();
 			$('#hide-comments-' + id).html(aStr['showmore']);
 			$('#hide-comments-total-' + id).show();
 		}
 		else {
+			$('#collapsed-comments-' + id + ' .autotime').timeago();
 			$('#collapsed-comments-' + id).slideDown();
 			$('#hide-comments-' + id).html(aStr['showfewer']);
 			$('#hide-comments-total-' + id).hide();
@@ -208,6 +244,7 @@
 	var pageHasMoreContent = true;
 	var updateCountsOnly = false;
 	var divmore_height = 400;
+	var last_filestorage_id = null;
 
 	$(function() {
 		$.ajaxSetup({cache: false});
@@ -268,9 +305,9 @@
 		}
 
 		// fancyboxes
-		$("a.popupbox").fancybox({
-			'transitionIn' : 'elastic',
-			'transitionOut' : 'elastic'
+		// Is this actually used anywhere?
+		$("a.popupbox").colorbox({
+			'transition' : 'elastic'
 		});
 		
 
@@ -437,6 +474,8 @@ function updatePageItems(mode,data) {
 		pageHasMoreContent = false;		
 	}
 
+	collapseHeight();
+
 }
 
 
@@ -449,6 +488,7 @@ function updateConvItems(mode,data) {
 		$('.thread-wrapper.toplevel_item',data).each(function() {
 
 			var ident = $(this).attr('id');
+			// This should probably use the context argument instead
 			var commentWrap = $('#'+ident+' .collapsed-comments').attr('id');
 			var itmId = 0;
 			var isVisible = false;
@@ -465,7 +505,7 @@ function updateConvItems(mode,data) {
 				$('#' + prev).after($(this));
 				if(isVisible)
 					showHideComments(itmId);
-				$(".autotime").timeago();
+				$("> .wall-item-outside-wrapper .autotime, > .thread-wrapper .autotime",this).timeago();
 			}
 			else {
 				$('img',this).each(function() {
@@ -476,7 +516,7 @@ function updateConvItems(mode,data) {
 				$('#' + ident).replaceWith($(this));
 				if(isVisible)
 					showHideComments(itmId);
-				$(".autotime").timeago();
+				$("> .wall-item-outside-wrapper .autotime, > .thread-wrapper .autotime",this).timeago();
 			}
 			prev = ident;
 		});
@@ -507,7 +547,7 @@ function updateConvItems(mode,data) {
 				$('#threads-end').before($(this));
 				if(isVisible)
 					showHideComments(itmId);
-				$(".autotime").timeago();
+				$("> .wall-item-outside-wrapper .autotime, > .thread-wrapper .autotime",this).timeago();
 			}
 			else {
 				$('img',this).each(function() {
@@ -518,7 +558,7 @@ function updateConvItems(mode,data) {
 				$('#' + ident).replaceWith($(this));
 				if(isVisible)
 					showHideComments(itmId);
-				$(".autotime").timeago();
+				$("> .wall-item-outside-wrapper .autotime, > .thread-wrapper .autotime",this).timeago();
 			}
 		});
 
@@ -552,15 +592,24 @@ function updateConvItems(mode,data) {
 				$('#' + prev).after($(this));
 				if(isVisible)
 					showHideComments(itmId);
-				$(".autotime").timeago();
+				$("> .wall-item-outside-wrapper .autotime, > .thread-wrapper .autotime",this).timeago();
 
 			}
 			prev = ident;
 		});
-
+		
 		if(loadingPage) {
 			loadingPage = false;
 		}
+
+		if (window.location.search.indexOf("mid=") != -1 || window.location.pathname.indexOf("display") != -1) {
+			var title = $(".wall-item-title").text();
+			title.replace(/^\s+/, '');
+			title.replace(/\s+$/, '');
+			if (title)
+				document.title = title + " - " + document.title;
+		}
+
 	}
 
 	$('.like-rotator').spin(false);
@@ -571,7 +620,7 @@ function updateConvItems(mode,data) {
 	}
 
 	/* autocomplete @nicknames */
-	$(".comment-edit-form  textarea").contact_autocomplete(baseurl+"/acl?f=&n=1");
+	$(".comment-edit-form  textarea").editor_autocomplete(baseurl+"/acl?f=&n=1");
 	
 	var bimgs = $(".wall-item-body img").not(function() { return this.complete; });
 	var bimgcount = bimgs.length;
@@ -592,17 +641,22 @@ function updateConvItems(mode,data) {
 
 
 	function collapseHeight() {
-		$(".wall-item-body").each(function() {
+		$(".wall-item-body, .contact-info").each(function() {
 			if($(this).height() > divmore_height + 10) {
 				if(! $(this).hasClass('divmore')) {
-					$(this).divgrow({ initialHeight: divmore_height, moreText: aStr['divgrowmore'], lessText: aStr['divgrowless'], showBrackets: false });
+					$(this).readmore({
+						collapsedHeight: divmore_height, 
+						moreLink: '<a href="#" class="divgrow-showmore">'+aStr['divgrowmore']+'</a>',
+						lessLink: '<a href="#" class="divgrow-showmore">'+aStr['divgrowless']+'</a>'
+					});
 					$(this).addClass('divmore');
 				}
-			}					
+			}
 		});
 	}
 
 	function liveUpdate() {
+		if(typeof profile_uid === 'undefined') profile_uid = false; /* Should probably be unified with channelId defined in head.tpl */
 		if((src == null) || (stopped) || (! profile_uid)) { $('.like-rotator').spin(false); return; }
 		if(($('.comment-edit-text-full').length) || (in_progress)) {
 			if(livetime) {
@@ -702,6 +756,8 @@ function updateConvItems(mode,data) {
 		justifiedGalleryActive = true;
 		$('#photo-album-contents').justifiedGallery({
 			margins: 3,
+			border: 0,
+			ignoreElement: '#page-end',
 			sizeRangeSuffixes: {
 				'lt100': '-2',
 				'lt240': '-2',
@@ -840,6 +896,19 @@ function updateConvItems(mode,data) {
 		});
 	}
 
+	function filestorage(event,nick,id) {
+		$('#cloud-index-' + last_filestorage_id).removeClass('cloud-index-active');
+		$('#perms-panel-' + last_filestorage_id).hide().html('');
+		$('#file-edit-' + id).spin('tiny');
+		delete acl;
+		$.get('filestorage/' + nick + '/' + id + '/edit', function(data) {
+			$('#cloud-index-' + id).addClass('cloud-index-active');
+			$('#perms-panel-' + id).html(data).show();
+			$('#file-edit-' + id).spin(false);
+			last_filestorage_id = id;
+		});
+	}
+
 	function post_comment(id) {
 		unpause();
 		commentBusy = true;
@@ -903,7 +972,7 @@ function updateConvItems(mode,data) {
 	function preview_post() {
 		$("#jot-preview").val("1");
 		$("#jot-preview-content").show();
-		tinyMCE.triggerSave();
+//		tinyMCE.triggerSave();
 		$.post(  
 			"item",  
 			$("#profile-jot-form").serialize(),
@@ -1020,6 +1089,8 @@ function fcFileBrowser (field_name, url, type, win) {
   }
 
 function setupFieldRichtext(){
+	return;
+/*
 	tinyMCE.init({
 		theme : "advanced",
 		mode : "specific_textareas",
@@ -1043,6 +1114,7 @@ function setupFieldRichtext(){
 		theme_advanced_path : false,
 		file_browser_callback : "fcFileBrowser",
 	});
+*/
 }
 
 
@@ -1069,7 +1141,7 @@ Array.prototype.remove = function(item) {
 function previewTheme(elm) {
 	theme = $(elm).val();
 	$.getJSON('pretheme?f=&theme=' + theme,function(data) {
-			$('#theme-preview').html('<div id="theme-desc">' + data.desc + '</div><div id="theme-version">' + data.version + '</div><div id="theme-credits">' + data.credits + '</div><a href="' + data.img + '"><img src="' + data.img + '" width="320" height="240" alt="' + theme + '" /></a>');
+			$('#theme-preview').html('<div id="theme-desc">' + data.desc + '</div><div id="theme-version">' + data.version + '</div><div id="theme-credits">' + data.credits + '</div><a href="' + data.img + '"><img src="' + data.img + '" style="max-width:100%; max-height:300px" alt="' + theme + '" /></a>');
 	});
 
 }
@@ -1098,6 +1170,8 @@ $(document).ready(function() {
 
 
 	$(".autotime").timeago();
+	$("#toc").toc();
+	
 
 });
 
@@ -1126,6 +1200,8 @@ $(window).scroll(function () {
 		}
 
 		if($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
+//		if($(window).scrollTop() > $(document).height() - ($(window).height() * 1.5 )) {
+
 			if((pageHasMoreContent) && (! loadingPage)) {
 				$('#more').hide();
 				$('#no-more').hide();
@@ -1146,6 +1222,7 @@ $(window).scroll(function () {
 		}
 
 		if($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
+//		if($(window).scrollTop() > ($(document).height() - $(window).height() * 1.5 )) {
 			if((pageHasMoreContent) && (! loadingPage) && (! justifiedGalleryActive)) {
 				$('#more').hide();
 				$('#no-more').hide();
@@ -1180,6 +1257,13 @@ function chanviewFull() {
 		data = h2b(data);
 		addeditortext(data);
 	}
+
+
+	function loadText(textRegion,data) {
+		var currentText = $(textRegion).val();
+		$(textRegion).val(currentText + data);
+	}
+
 
 	function addeditortext(data) {
 		if(plaintext == 'none') {

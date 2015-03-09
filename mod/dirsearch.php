@@ -12,7 +12,7 @@ function dirsearch_content(&$a) {
 
 	$ret = array('success' => false);
 
-	// If you've got a public directory server, you probably shouldn't block public access
+//	logger('request: ' . print_r($_REQUEST,true));
 
 
 	$dirmode = intval(get_config('system','directory_mode'));
@@ -21,6 +21,15 @@ function dirsearch_content(&$a) {
 		$ret['message'] = t('This site is not a directory server');
 		json_return_and_die($ret);
 	}
+
+	$access_token = $_REQUEST['t'];
+
+	$token = get_config('system','realm_token');
+	if($token && $access_token != $token) {
+		$result['message'] = t('This directory server requires an access token');
+		return;
+	}
+
 
 	if(argc() > 1 && argv(1) === 'sites') {
 		$ret = list_public_sites();
@@ -112,7 +121,7 @@ function dirsearch_content(&$a) {
 		$sql_extra .= dir_query_build($joiner,'xprof_keywords',$keywords);
 
 	if($forums)
-		$sql_extra .= dir_flag_build($joiner,'xprof_flags',XCHAN_FLAGS_PUBFORUM, $forums);
+		$safesql .= dir_flag_build(' AND ','xchan_flags',XCHAN_FLAGS_PUBFORUM, $forums);
 
 
 	// we only support an age range currently. You must set both agege 
@@ -125,7 +134,7 @@ function dirsearch_content(&$a) {
 
 
 	if($hash) {
-		$sql_extra = " AND xchan_hash = '" . dbesc($hash) . "' ";
+		$sql_extra = " AND xchan_hash like '" . dbesc($hash) . protect_sprintf('%') . "' ";
 	}
 
 
@@ -148,24 +157,24 @@ function dirsearch_content(&$a) {
 	// If &return_total=1, we count matching entries and return that as 'total_items' for use in pagination.
 	// By default we return one page (default 80 items maximum) and do not count total entries
 
-	$logic = ((strlen($sql_extra)) ? 0 : 1);
+	$logic = ((strlen($sql_extra)) ? 'false' : 'true');
 
 	if($hash)
-		$logic = 1;
+		$logic = 'true';
 
 	if($dirmode == DIRECTORY_MODE_STANDALONE) {
 		$sql_extra .= " and xchan_addr like '%%" . get_app()->get_hostname() . "' ";
 	}
 
 
-	$safesql = (($safe > 0) ? " and not ( xchan_flags & " . intval(XCHAN_FLAGS_CENSORED|XCHAN_FLAGS_SELFCENSORED) . " )>0 " : '');
+	$safesql .= (($safe > 0) ? " and not ( xchan_flags & " . intval(XCHAN_FLAGS_CENSORED|XCHAN_FLAGS_SELFCENSORED) . " )>0 " : '');
 	if($safe < 0)
-		$safesql = " and ( xchan_flags & " . intval(XCHAN_FLAGS_CENSORED|XCHAN_FLAGS_SELFCENSORED) . " )>0 ";
+		$safesql .= " and ( xchan_flags & " . intval(XCHAN_FLAGS_CENSORED|XCHAN_FLAGS_SELFCENSORED) . " )>0 ";
 
 	if($limit) 
 		$qlimit = " LIMIT $limit ";
 	else {
-		$qlimit = " LIMIT " . intval($startrec) . " , " . intval($perpage);
+		$qlimit = " LIMIT " . intval($perpage) . " OFFSET " . intval($startrec);
 		if($return_total) {
 			$r = q("SELECT COUNT(xchan_hash) AS `total` FROM xchan left join xprof on xchan_hash = xprof_hash where $logic $sql_extra and xchan_network = 'zot' and not ( xchan_flags & %d)>0 and not ( xchan_flags & %d )>0 and not ( xchan_flags & %d )>0 $safesql ",
 				intval(XCHAN_FLAGS_HIDDEN),
@@ -179,8 +188,15 @@ function dirsearch_content(&$a) {
 	}
 
 
-	if($sort_order == 'normal')
+	if($sort_order == 'normal') {
 		$order = " order by xchan_name asc ";
+
+		// Start the alphabetic search at 'A' 
+		// This will make a handful of channels whose names begin with
+		// punctuation un-searchable in this mode
+
+		$safesql .= " and ascii(substr(xchan_name FROM 1 FOR 1)) > 64 ";
+	}
 	elseif($sort_order == 'reverse')
 		$order = " order by xchan_name desc ";
 	elseif($sort_order == 'reversedate')
@@ -210,26 +226,56 @@ function dirsearch_content(&$a) {
 				);
 			}
 		}
+		$r = q("select * from xlink where xlink_static = 1 and xlink_updated >= '%s' ",
+			dbesc($sync)
+		);
+		if($r) {
+			$spkt['ratings'] = array();
+			foreach($r as $rr) {
+				$spkt['ratings'][] = array(
+					'type' => 'rating', 
+					'encoding' => 'zot',
+					'channel' => $rr['xlink_xchan'],
+					'target' => $rr['xlink_link'],
+					'rating' => intval($rr['xlink_rating']),
+					'rating_text' => $rr['xlink_rating_text'],
+					'signature' => $rr['xlink_sig'],
+					'edited' => $rr['xlink_updated']
+				);
+			}
+		}
 		json_return_and_die($spkt);
 	}
 	else {
+
 		$r = q("SELECT xchan.*, xprof.* from xchan left join xprof on xchan_hash = xprof_hash where ( $logic $sql_extra ) and xchan_network = 'zot' and not ( xchan_flags & %d )>0 and not ( xchan_flags & %d )>0 and not ( xchan_flags & %d )>0 $safesql $order $qlimit ",
 			intval(XCHAN_FLAGS_HIDDEN),
 			intval(XCHAN_FLAGS_ORPHAN),
 			intval(XCHAN_FLAGS_DELETED)
 		);
+
+
+		$ret['page'] = $page + 1;
+		$ret['records'] = count($r);		
 	}
 
-	$ret['page'] = $page + 1;
-	$ret['records'] = count($r);		
 
 	if($r) {
 
 		$entries = array();
 
-
 		foreach($r as $rr) {
+
 			$entry = array();
+
+			$pc = q("select count(xlink_rating) as total_ratings from xlink where xlink_link = '%s' and xlink_rating != 0 and xlink_static = 1 group by xlink_rating",
+				dbesc($rr['xchan_hash'])
+			);
+
+			if($pc)
+				$entry['total_ratings'] = intval($pc[0]['total_ratings']);
+			else
+				$entry['total_ratings'] = 0;
 
 			$entry['name']        = $rr['xchan_name'];
 			$entry['hash']        = $rr['xchan_hash'];
@@ -282,7 +328,7 @@ function dir_query_build($joiner,$field,$s) {
 }
 
 function dir_flag_build($joiner,$field,$bit,$s) {
-	return dbesc($joiner) . " ( " . dbesc('xchan_flags') . " & " . intval($bit) . " ) " . ((intval($s)) ? '>' : '=' ) . " 0 ";
+	return dbesc($joiner) . " ( " . dbesc($field) . " & " . intval($bit) . " ) " . ((intval($s)) ? '>' : '=' ) . " 0 ";
 }
 
 
@@ -355,14 +401,15 @@ function dir_parse_query($s) {
 
 function list_public_sites() {
 
+	$rand = db_getfunc('rand');
 	$realm = get_directory_realm();
 	if($realm == DIRECTORY_REALM) {
-		$r = q("select * from site where site_access != 0 and site_register !=0 and ( site_realm = '%s' or site_realm = '') order by rand()",
+		$r = q("select * from site where site_access != 0 and site_register !=0 and ( site_realm = '%s' or site_realm = '') order by $rand",
 			dbesc($realm)
 		);
 	}
 	else {
-		$r = q("select * from site where site_access != 0 and site_register !=0 and site_realm = '%s' order by rand()",
+		$r = q("select * from site where site_access != 0 and site_register !=0 and site_realm = '%s' order by $rand",
 			dbesc($realm)
 		);
 	}

@@ -7,11 +7,20 @@
 		$.get(
 			'{{$baseurl}}/events/?id='+eventid,
 			function(data){
-				$.colorbox({ html: data });
+				$.colorbox({ scrolling: false, html: data, onComplete: function() { $.colorbox.resize(); }});
 			}
 		);			
 	}
 	
+	function doEventPreview() {
+		$('#event-edit-preview').val(1);
+		$.post('events',$('#event-edit-form').serialize(), function(data) {
+			$.colorbox({ html: data });
+		});
+		$('#event-edit-preview').val(0);
+	}
+
+
 	$(document).ready(function() {
 		$('#events-calendar').fullCalendar({
 			events: '{{$baseurl}}/events/json/',
@@ -23,6 +32,11 @@
 			timeFormat: 'H(:mm)',
 			eventClick: function(calEvent, jsEvent, view) {
 				showEvent(calEvent.id);
+			},
+			loading: function(isLoading, view) {
+				if(!isLoading) {
+					$('td.fc-day').dblclick(function() { window.location.href='/events/new?start='+$(this).data('date'); });
+				}
 			},
 
 			eventRender: function(event, element, view) {
@@ -113,9 +127,9 @@
 
 	$(document).ready(function() { 
 
-		$('#event-share-checkbox').change(function() {
+		$('#id_share').change(function() {
 
-			if ($('#event-share-checkbox').is(':checked')) { 
+			if ($('#id_share').is(':checked')) { 
 				$('#event-permissions-button').show();
 			}
 			else {

@@ -12,10 +12,10 @@ function home_init(&$a) {
 	$splash = ((argc() > 1 && argv(1) === 'splash') ? true : false);
 
 	$channel = $a->get_channel();
-	if(local_user() && $channel && $channel['xchan_url'] && ! $splash) {
+	if(local_channel() && $channel && $channel['xchan_url'] && ! $splash) {
 		$dest = $channel['channel_startpage'];
 		if(! $dest)
-			$dest = get_pconfig(local_user(),'system','startpage');
+			$dest = get_pconfig(local_channel(),'system','startpage');
 		if(! $dest)
 			$dest = get_config('system','startpage');
 		if(! $dest)
@@ -100,7 +100,7 @@ function home_content(&$a, $update = 0, $load = false) {
 		if($sitename) 
 			$o .= '<h1>' . sprintf( t("Welcome to %s") ,$sitename) . '</h1>';
 
-		if(intval(get_config('system','block_public')) && (! local_user()) && (! remote_user())) {
+		if(intval(get_config('system','block_public')) && (! local_channel()) && (! remote_channel())) {
 			// If there's nothing special happening, just spit out a login box
 
 			if (! $a->config['system']['no_login_on_homepage'])
@@ -109,6 +109,11 @@ function home_content(&$a, $update = 0, $load = false) {
 		}
 		else {
 
+			if(get_config('system','disable_discover_tab')) {
+				call_hooks('home_content',$o);
+				return $o;
+			}
+
 			if(! $update) {
 
 				$maxheight = get_config('system','home_divmore_height');
@@ -116,14 +121,14 @@ function home_content(&$a, $update = 0, $load = false) {
 					$maxheight = 75;
 
 				$o .= '<div id="live-home"></div>' . "\r\n";
-				$o .= "<script> var profile_uid = " . ((intval(local_user())) ? local_user() : (-1)) 
+				$o .= "<script> var profile_uid = " . ((intval(local_channel())) ? local_channel() : (-1)) 
 					. "; var profile_page = " . $a->pager['page'] 
 					. "; divmore_height = " . intval($maxheight) . "; </script>\r\n";
 
 				$a->page['htmlhead'] .= replace_macros(get_markup_template("build_query.tpl"),array(
 					'$baseurl' => z_root(),
 					'$pgtype'  => 'home',
-					'$uid'     => ((local_user()) ? local_user() : '0'),
+					'$uid'     => ((local_channel()) ? local_channel() : '0'),
 					'$gid'     => '0',
 					'$cid'     => '0',
 					'$cmin'    => '0',
@@ -141,8 +146,10 @@ function home_content(&$a, $update = 0, $load = false) {
 					'$order'   => 'comment',
 					'$file'    => '',
 					'$cats'    => '',
+					'$tags'    => '',
 					'$dend'    => '',
 					'$mid'     => '',
+					'$verb'     => '',
 					'$dbegin'  => ''
 				));
 			}
@@ -157,13 +164,20 @@ function home_content(&$a, $update = 0, $load = false) {
 			}
 
 			require_once('include/identity.php');
-			$sys = get_sys_channel();
-			$uids = " and item.uid  = " . intval($sys['channel_id']) . " ";
-			$a->data['firehose'] = intval($sys['channel_id']);
+
+			if(get_config('system','site_firehose')) {
+				require_once('include/security.php');
+				$uids = " and item.uid in ( " . stream_perms_api_uids(PERMS_PUBLIC) . " ) and item_private = 0  and (item_flags & " . intval(ITEM_WALL) . " ) > 0 ";
+			}
+			else {
+				$sys = get_sys_channel();
+				$uids = " and item.uid  = " . intval($sys['channel_id']) . " ";
+				$a->data['firehose'] = intval($sys['channel_id']);
+			}
 
 			$page_mode = 'list';
 
-			$simple_update = (($update) ? " and ( item.item_flags & " . intval(ITEM_UNSEEN) . " ) > 0 " : '');
+			$simple_update = (($update) ? " and item.item_unseen = 1 " : '');
 
 			if($update && $_SESSION['loadtime'])
 				$simple_update .= " and item.changed > '" . datetime_convert('UTC','UTC',$_SESSION['loadtime']) . "' ";
@@ -191,6 +205,7 @@ function home_content(&$a, $update = 0, $load = false) {
 						ORDER BY $ordering DESC $pager_sql ",
 						intval(ABOOK_FLAG_BLOCKED)
 					);
+
 
 				}
 

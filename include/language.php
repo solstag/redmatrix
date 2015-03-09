@@ -24,6 +24,7 @@
  */
 function get_browser_language() {
 	$langs = array();
+	$lang_parse = array();
 
 	if (x($_SERVER,'HTTP_ACCEPT_LANGUAGE')) {
 		// break up string into pieces (languages and q factors)
@@ -33,7 +34,7 @@ function get_browser_language() {
 		if (count($lang_parse[1])) {
 			// create a list like "en" => 0.8
 			$langs = array_combine($lang_parse[1], $lang_parse[4]);
-		
+
 			// set default to 1 for any without q factor
 			foreach ($langs as $lang => $val) {
 				if ($val === '') $langs[$lang] = 1;
@@ -144,16 +145,16 @@ function load_translation_table($lang, $install = false) {
 /**
  * @brief translate string if translation exists.
  *
- * @param $s string that should get translated
- * @param $ctx optional context to appear in po file
+ * @param string $s string that should get translated
+ * @param string $ctx optional context to appear in po file
  * @return translated string if exists, otherwise return $s
  *
  */
-function t($s,$ctx = '') {
+function t($s, $ctx = '') {
 	global $a;
 
-	$cs = $ctx?"__ctx:".$ctx."__ ".$s:$s;
-	if(x($a->strings,$cs)) {
+	$cs = $ctx ? '__ctx:' . $ctx . '__ ' . $s : $s;
+	if(x($a->strings, $cs)) {
 		$t = $a->strings[$cs];
 		return is_array($t) ? $t[0] : $t;
 	}
@@ -218,7 +219,7 @@ function detect_language($s) {
 	// strip off bbcode
 	$naked_body = preg_replace('/\[(.+?)\]/', '', $naked_body);
 	if(mb_strlen($naked_body) < intval($min_length)) {
-		logger('detect language: string length less than ' . intval($min_length), LOGGER_DATA);
+		logger('string length less than ' . intval($min_length), LOGGER_DATA);
 		return '';
 	}
 
@@ -250,8 +251,7 @@ function detect_language($s) {
  * By default we use the localized language name. You can switch the result
  * to any language with the optional 2nd parameter $l.
  *
- * $s and $l can be in any format that PHP's Locale understands. We will mostly
- * use the 2-letter ISO 639-1 (en, de, fr) format.
+ * $s and $l should be in 2-letter ISO 639-1 format
  *
  * If nothing could be looked up it returns $s.
  *
@@ -259,11 +259,30 @@ function detect_language($s) {
  * @param $l (optional) In which language to return the name
  * @return string with the language name, or $s if unrecognized
  */
+require_once(__DIR__ . '/../library/intl/vendor/autoload.php');
+use CommerceGuys\Intl\Language\LanguageRepository;
 function get_language_name($s, $l = null) {
-	if($l === null)
-		$l = $s;
+	// get() expects the second part to be in upper case
+	if(strpos($s,'-') !== false) $s = substr($s,0,2) . strtoupper(substr($s,2));
+	if($l !== null && strpos($l,'-') !== false) $l = substr($l,0,2) . strtoupper(substr($l,2));
 
-	logger('get_language_name: for ' . $s . ' in ' . $l . ' returns: ' . Locale::getDisplayLanguage($s, $l), LOGGER_DEBUG);
-	return Locale::getDisplayLanguage($s, $l);
+	$languageRepository = new LanguageRepository;
+
+	// Sometimes intl doesn't like the second part at all ...
+	try {
+		$language = $languageRepository->get($s, $l);
+	}
+	catch(CommerceGuys\Intl\Exception\UnknownLanguageException $e) {
+		$s = substr($s,0,2);
+		if($l !== null) $l = substr($s,0,2);
+		try {
+			$language = $languageRepository->get($s, $l);
+		}
+		catch(CommerceGuys\Intl\Exception\UnknownLanguageException $e) {
+			return $s; // Give up
+		}
+	} 
+
+	return $language->getName();
 }
 

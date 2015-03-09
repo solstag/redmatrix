@@ -16,6 +16,11 @@
 		'permschange' : "{{$permschange}}",
 		'closeAll'    : "{{$closeAll}}",
 		'nothingnew'  : "{{$nothingnew}}",
+		'rating_desc' : "{{$rating_desc}}",
+		'rating_val'  : "{{$rating_val}}",
+		'rating_text' : "{{$rating_text}}",
+		'submit'      : "{{$submit}}",
+		'linkurl'     : "{{$linkurl}}",
 
 		't01' : "{{$t01}}",
 		't02' : "{{$t02}}",

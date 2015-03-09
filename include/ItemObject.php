@@ -63,7 +63,7 @@ class Item extends BaseObject {
 	 *      _ false on failure
 	 */
 
-	public function get_template_data($alike, $dlike, $thread_level=1) {
+	public function get_template_data($conv_responses, $thread_level=1) {
 	
 		$result = array();
 
@@ -84,11 +84,11 @@ class Item extends BaseObject {
 		$conv = $this->get_conversation();
 		$observer = $conv->get_observer();
 
-		$lock = ((($item['item_private'] == 1) || (($item['uid'] == local_user()) && (strlen($item['allow_cid']) || strlen($item['allow_gid']) 
+		$lock = ((($item['item_private'] == 1) || (($item['uid'] == local_channel()) && (strlen($item['allow_cid']) || strlen($item['allow_gid']) 
 			|| strlen($item['deny_cid']) || strlen($item['deny_gid']))))
 			? t('Private Message')
 			: false);
-		$shareable = ((($conv->get_profile_owner() == local_user() && local_user()) && ($item['item_private'] != 1)) ? true : false);
+		$shareable = ((($conv->get_profile_owner() == local_channel() && local_channel()) && ($item['item_private'] != 1)) ? true : false);
 
 		// allow an exemption for sharing stuff from your private feeds
 		if($item['author']['xchan_network'] === 'rss')
@@ -96,7 +96,7 @@ class Item extends BaseObject {
 
 		$mode = $conv->get_mode();
 
-		if(local_user() && $observer['xchan_hash'] === $item['author_xchan'])
+		if(local_channel() && $observer['xchan_hash'] === $item['author_xchan'])
 			$edpost = array($a->get_baseurl($ssl_state)."/editpost/".$item['id'], t("Edit"));
 		else
 			$edpost = false;
@@ -104,7 +104,7 @@ class Item extends BaseObject {
 
 		if($observer['xchan_hash'] == $this->get_data_value('author_xchan') 
 			|| $observer['xchan_hash'] == $this->get_data_value('owner_xchan') 
-			|| $this->get_data_value('uid') == local_user())
+			|| $this->get_data_value('uid') == local_channel())
 			$dropping = true;
 
 
@@ -127,16 +127,49 @@ class Item extends BaseObject {
 			);
 		}
 
-		$filer = ((($conv->get_profile_owner() == local_user()) && (! array_key_exists('real_uid',$item))) ? t("Save to Folder") : false);
+		$filer = ((($conv->get_profile_owner() == local_channel()) && (! array_key_exists('real_uid',$item))) ? t("Save to Folder") : false);
 
 		$profile_avatar = $item['author']['xchan_photo_m'];
 		$profile_link   = chanlink_url($item['author']['xchan_url']);
 		$profile_name   = $item['author']['xchan_name'];
 
 		$location = format_location($item);
+		$isevent = false;
+		$attend = null;
+		$canvote = false;
 
-		$like_count = ((x($alike,$item['mid'])) ? $alike[$item['mid']] : '');
-		$like_list = ((x($alike,$item['mid'])) ? $alike[$item['mid'] . '-l'] : '');
+		// process action responses - e.g. like/dislike/attend/agree/whatever
+		$response_verbs = array('like');
+		if(feature_enabled($conv->get_profile_owner(),'dislike'))
+			$response_verbs[] = 'dislike';
+		if($item['obj_type'] === ACTIVITY_OBJ_EVENT) {
+			$response_verbs[] = 'attendyes';
+			$response_verbs[] = 'attendno';
+			$response_verbs[] = 'attendmaybe';
+			if($this->is_commentable()) {
+				$isevent = true;
+				$attend = array( t('I will attend'), t('I will not attend'), t('I might attend'));
+			}
+		}
+
+		$consensus = (($item['item_flags'] & ITEM_CONSENSUS) ? true : false);
+		if($consensus) {
+			$response_verbs[] = 'agree';
+			$response_verbs[] = 'disagree';
+			$response_verbs[] = 'abstain';
+			if($this->is_commentable()) {
+				$conlabels = array( t('I agree'), t('I disagree'), t('I abstain'));
+				$canvote = true;
+			}
+		}
+
+		if(! feature_enabled($conv->get_profile_owner(),'dislike'))
+			unset($conv_responses['dislike']);
+  
+		$responses = get_responses($conv_responses,$response_verbs,$this,$item);
+
+		$like_count = ((x($conv_responses['like'],$item['mid'])) ? $conv_responses['like'][$item['mid']] : '');
+		$like_list = ((x($conv_responses['like'],$item['mid'])) ? $conv_responses['like'][$item['mid'] . '-l'] : '');
 		if (count($like_list) > MAX_LIKERS) {
 			$like_list_part = array_slice($like_list, 0, MAX_LIKERS);
 			array_push($like_list_part, '<a href="#" data-toggle="modal" data-target="#likeModal-' . $this->get_id() . '"><b>' . t('View all') . '</b></a>');
@@ -146,8 +179,8 @@ class Item extends BaseObject {
 		$like_button_label = tt('Like','Likes',$like_count,'noun');
 
 		if (feature_enabled($conv->get_profile_owner(),'dislike')) {
-			$dislike_count = ((x($dlike,$item['mid'])) ? $dlike[$item['mid']] : '');
-			$dislike_list = ((x($dlike,$item['mid'])) ? $dlike[$item['mid'] . '-l'] : '');
+			$dislike_count = ((x($conv_responses['dislike'],$item['mid'])) ? $conv_responses['dislike'][$item['mid']] : '');
+			$dislike_list = ((x($conv_responses['dislike'],$item['mid'])) ? $conv_responses['dislike'][$item['mid'] . '-l'] : '');
 			$dislike_button_label = tt('Dislike','Dislikes',$dislike_count,'noun');
 			if (count($dislike_list) > MAX_LIKERS) {
 				$dislike_list_part = array_slice($dislike_list, 0, MAX_LIKERS);
@@ -157,9 +190,9 @@ class Item extends BaseObject {
 			}
 		}
 
-		$showlike    = ((x($alike,$item['mid'])) ? format_like($alike[$item['mid']],$alike[$item['mid'] . '-l'],'like',$item['mid']) : '');
-		$showdislike = ((x($dlike,$item['mid']) && feature_enabled($conv->get_profile_owner(),'dislike'))  
-				? format_like($dlike[$item['mid']],$dlike[$item['mid'] . '-l'],'dislike',$item['mid']) : '');
+		$showlike    = ((x($conv_responses['like'],$item['mid'])) ? format_like($conv_responses['like'][$item['mid']],$conv_responses['like'][$item['mid'] . '-l'],'like',$item['mid']) : '');
+		$showdislike = ((x($conv_responses['dislike'],$item['mid']) && feature_enabled($conv->get_profile_owner(),'dislike'))  
+				? format_like($conv_responses['dislike'][$item['mid']],$conv_responses['dislike'][$item['mid'] . '-l'],'dislike',$item['mid']) : '');
 
 		/*
 		 * We should avoid doing this all the time, but it depends on the conversation mode
@@ -171,7 +204,7 @@ class Item extends BaseObject {
 		
 		if($this->is_toplevel()) {
 			// FIXME check this permission
-			if(($conv->get_profile_owner() == local_user()) && (! array_key_exists('real_uid',$item))) {
+			if(($conv->get_profile_owner() == local_channel()) && (! array_key_exists('real_uid',$item))) {
 
 // FIXME we don't need all this stuff, some can be done in the template
 
@@ -198,7 +231,7 @@ class Item extends BaseObject {
 
 
 		// FIXME - check this permission
-		if($conv->get_profile_owner() == local_user()) {
+		if($conv->get_profile_owner() == local_channel()) {
 			$tagger = array(
 				'tagit' => t("Add Tag"),
 				'classtagger' => "",
@@ -214,7 +247,7 @@ class Item extends BaseObject {
 		}
 
 		$has_event = false;
-		if(($item['obj_type'] === ACTIVITY_OBJ_EVENT) && $conv->get_profile_owner() == local_user())
+		if(($item['obj_type'] === ACTIVITY_OBJ_EVENT) && $conv->get_profile_owner() == local_channel())
 			$has_event = true;
 
 		if($this->is_commentable()) {
@@ -231,7 +264,14 @@ class Item extends BaseObject {
 
 		localize_item($item);
 		$body = prepare_body($item,true);
-		
+
+		// $viewthread (below) is only valid in list mode. If this is a channel page, build the thread viewing link
+		// since we can't depend on llink or plink pointing to the right local location.
+ 
+		$owner_address = substr($item['owner']['xchan_addr'],0,strpos($item['owner']['xchan_addr'],'@'));
+		$viewthread = $item['llink'];
+		if($conv->get_mode() === 'channel')
+			$viewthread = z_root() . '/channel/' . $owner_address . '?f=&mid=' . $item['mid'];
 
 		$comment_count_txt = sprintf( tt('%d comment','%d comments',$total_children),$total_children );
 		$list_unseen_txt = (($unseen_comments) ? sprintf('%d unseen',$unseen_comments) : '');
@@ -246,9 +286,15 @@ class Item extends BaseObject {
 			'body' => $body,
 			'text' => strip_tags($body),
 			'id' => $this->get_id(),
+			'isevent' => $isevent,
+			'attend' => $attend,
+			'consensus' => $consensus,
+			'conlabels' => $conlabels,
+			'canvote' => $canvote,
 			'linktitle' => sprintf( t('View %s\'s profile - %s'), $profile_name, $item['author']['xchan_addr']),
 			'olinktitle' => sprintf( t('View %s\'s profile - %s'), $this->get_owner_name(), $item['owner']['xchan_addr']),
 			'llink' => $item['llink'],
+			'viewthread' => $viewthread,
 			'to' => t('to'),
 			'via' => t('via'),
 			'wall' => t('Wall-to-Wall'),
@@ -284,11 +330,11 @@ class Item extends BaseObject {
 			'share'     => $share,
 			'rawmid'	=> $item['mid'],
 			'plink'     => get_plink($item),
-			'edpost'    => ((feature_enabled($conv->get_profile_owner(),'edit_posts')) ? $edpost : ''),
+			'edpost'    => $edpost, // ((feature_enabled($conv->get_profile_owner(),'edit_posts')) ? $edpost : ''),
 			'star'      => ((feature_enabled($conv->get_profile_owner(),'star_posts')) ? $star : ''),
 			'tagger'    => ((feature_enabled($conv->get_profile_owner(),'commtag')) ? $tagger : ''),
 			'filer'     => ((feature_enabled($conv->get_profile_owner(),'filing')) ? $filer : ''),
-			'bookmark'  => (($conv->get_profile_owner() == local_user() && local_user() && $has_bookmarks) ? t('Save Bookmarks') : ''),
+			'bookmark'  => (($conv->get_profile_owner() == local_channel() && local_channel() && $has_bookmarks) ? t('Save Bookmarks') : ''),
 			'addtocal'  => (($has_event) ? t('Add to Calendar') : ''),
 			'drop'      => $drop,
 			'multidrop' => ((feature_enabled($conv->get_profile_owner(),'multi_delete')) ? $multidrop : ''),
@@ -299,6 +345,7 @@ class Item extends BaseObject {
 			'comment_count_txt' => $comment_count_txt,
 			'list_unseen_txt' => $list_unseen_txt,
 			'markseen' => t('Mark all seen'),
+			'responses' => $responses,
 			'like_count' => $like_count,
 			'like_list' => $like_list,
 			'like_list_part' => $like_list_part,
@@ -328,7 +375,7 @@ class Item extends BaseObject {
 
 		if(($this->get_display_mode() === 'normal') && ($nb_children > 0)) {
 			foreach($children as $child) {
-				$result['children'][] = $child->get_template_data($alike, $dlike, $thread_level + 1);
+				$result['children'][] = $child->get_template_data($conv_responses, $thread_level + 1);
 			}
 			// Collapse
 			if(($nb_children > 2) || ($thread_level > 1)) {
@@ -561,7 +608,7 @@ class Item extends BaseObject {
 				if((! visible_activity($child->data)) || array_key_exists('author_blocked',$child->data)) {
 					continue;
 				}
-				if($child->data['item_flags'] & ITEM_UNSEEN)
+				if(intval($child->data['item_unseen']))
 					$total ++;
 			}
 		}
@@ -602,7 +649,7 @@ class Item extends BaseObject {
 		$a = $this->get_app();
 		$observer = $conv->get_observer();
 
-		$qc = ((local_user()) ? get_pconfig(local_user(),'system','qcomment') : null);
+		$qc = ((local_channel()) ? get_pconfig(local_channel(),'system','qcomment') : null);
 		$qcomment = (($qc) ? explode("\n",$qc) : null);
 
 		$comment_box = replace_macros($template,array(
@@ -627,7 +674,7 @@ class Item extends BaseObject {
 			'$edimg' => t('Image'),
 			'$edurl' => t('Link'),
 			'$edvideo' => t('Video'),
-			'$preview' => ((feature_enabled($conv->get_profile_owner(),'preview')) ? t('Preview') : ''),
+			'$preview' => t('Preview'), // ((feature_enabled($conv->get_profile_owner(),'preview')) ? t('Preview') : ''),
 			'$indent' => $indent,
 			'$feature_encrypt' => ((feature_enabled($conv->get_profile_owner(),'content_encrypt')) ? true : false),
 			'$encrypt' => t('Encrypt text'),

@@ -11,6 +11,7 @@
 		<input type="hidden" name="post_id" value="{{$post_id}}" />
 		<input type="hidden" name="webpage" value="{{$webpage}}" />
 		<input type="hidden" name="preview" id="jot-preview" value="0" />
+		<input type="hidden" id="jot-consensus" name="consensus" value="{{if $consensus}}{{$consensus}}{{else}}0{{/if}}" />
 		{{if $showacl}}{{$acl}}{{/if}}
 		{{$mimeselect}}
 		{{$layoutselect}}
@@ -19,21 +20,21 @@
 			<span class="channel-id-select-desc">{{$id_seltext}}</span> {{$id_select}}
 			</div>
 		{{/if}}
-		<div id="jot-title-wrap">
-			<input name="title" id="jot-title" type="text" placeholder="{{$placeholdertitle}}" value="{{$title}}" class="jothidden" style="display:none">
+		<div id="jot-title-wrap"  class="jothidden" style="display:none">
+			<input name="title" id="jot-title" type="text" placeholder="{{$placeholdertitle}}" tabindex=1 value="{{$title}}">
 		</div>
 		{{if $catsenabled}}
-		<div id="jot-category-wrap">
-			<input name="category" id="jot-category" type="text" placeholder="{{$placeholdercategory}}" value="{{$category}}" class="jothidden" style="display:none" />
+		<div id="jot-category-wrap"  class="jothidden" style="display:none">
+			<input name="category" id="jot-category" type="text" placeholder="{{$placeholdercategory}}" value="{{$category}}" data-role="tagsinput"/>
 		</div>
 		{{/if}}
 		{{if $webpage}}
-		<div id="jot-pagetitle-wrap">
-			<input name="pagetitle" id="jot-pagetitle" type="text" placeholder="{{$placeholdpagetitle}}" value="{{$pagetitle}}" class="jothidden" style="display:none" />
+		<div id="jot-pagetitle-wrap" class="jothidden" style="display:none">
+			<input name="pagetitle" id="jot-pagetitle" type="text" placeholder="{{$placeholdpagetitle}}" value="{{$pagetitle}}"  />
 		</div>
 		{{/if}}
 		<div id="jot-text-wrap">
-			<textarea class="profile-jot-text" id="profile-jot-text" name="body" placeholder="{{$share}}">{{$content}}</textarea>
+			<textarea class="profile-jot-text" id="profile-jot-text" name="body" tabindex=2 placeholder="{{$share}}">{{$content}}</textarea>
 		</div>
 		<div id="profile-jot-submit-wrapper" class="jothidden">
 			<div id="profile-jot-submit-left" class="btn-toolbar pull-left">
@@ -77,6 +78,11 @@
 						<i id="profile-encrypt" class="icon-key jot-icons"></i>
 					</button>
 				{{/if}}
+				{{if $feature_voting}}
+					<button id="profile-voting-wrapper" class="btn btn-default btn-sm" title="{{$voting}}" onclick="toggleVoting();return false;">
+						<i id="profile-voting" class="icon-check-empty jot-icons"></i>
+					</button>
+				{{/if}}
 				</div>
 			</div>
 			<div id="profile-rotator-wrapper">
@@ -93,7 +99,7 @@
 					<i class="icon-eye-open jot-icons" ></i>
 				</button>
 				{{/if}}
-				<button id="dbtn-submit" class="btn btn-primary btn-sm" type="submit" name="button-submit" >{{$share}}</button>
+				<button id="dbtn-submit" class="btn btn-primary btn-sm" type="submit" tabindex=3 name="button-submit" >{{$share}}</button>
 			</div>
 			<div id="profile-jot-perms-end"></div>
 			<div id="profile-jot-plugin-wrapper">

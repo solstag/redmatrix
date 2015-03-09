@@ -50,6 +50,18 @@ function siteinfo_init(&$a) {
 
 		$site_info = get_config('system','info');
 		$site_name = get_config('system','sitename');
+		if(! get_config('system','hidden_version_siteinfo')) {
+			$version = RED_VERSION;
+			if(@is_dir('.git') && function_exists('shell_exec')) {
+				$commit = trim( @shell_exec('git log -1 --format="%h"'));
+				$tag = trim( @shell_exec('git describe --tags --abbrev=0'));
+			}
+			if(! isset($commit) || strlen($commit) > 16)
+				$commit = '';
+		}
+		else {
+				$version = $commit = '';
+		}
 		
 		//Statistics
 		$channels_total_stat = intval(get_config('system','channels_total_stat'));
@@ -59,7 +71,8 @@ function siteinfo_init(&$a) {
 		$hide_in_statistics = intval(get_config('system','hide_in_statistics'));
 		
 		$data = Array(
-			'version' => RED_VERSION,
+			'version' => $version,
+			'version_tag' => $tag,
 			'commit' => $commit,
 			'url' => z_root(),
 			'plugins' => $visible_plugins,
@@ -73,6 +86,7 @@ function siteinfo_init(&$a) {
 			'site_name' => (($site_name) ? $site_name : ''),
 			'platform' => RED_PLATFORM,
 			'dbdriver' => $db->getdriver(),
+			'lastpoll' => get_config('system','lastpoll'),
 			'info' => (($site_info) ? $site_info : ''),
 			'channels_total' => $channels_total_stat,
 			'channels_active_halfyear' => $channels_active_halfyear_stat,
@@ -125,7 +139,8 @@ function siteinfo_content(&$a) {
 	else
 		$plugins_text = t('No installed plugins/addons/apps');
 
-	$admininfo = bbcode(get_config('system','admininfo'));
+	$txt = get_config('system','admininfo');
+	$admininfo = bbcode($txt);
 
 	if(file_exists('doc/site_donate.html'))
 		$donate .= file_get_contents('doc/site_donate.html');
@@ -134,10 +149,13 @@ function siteinfo_content(&$a) {
                 '$title' => t('Red'),
 		'$description' => t('This is a hub of the Red Matrix - a global cooperative network of decentralized privacy enhanced websites.'),
 		'$version' => $version,
+		'$tag_txt' => t('Tag: '),
 		'$tag' => $tag,
+		'$polled' => t('Last background fetch: '),
+		'$lastpoll' => get_poller_runtime(),
 		'$commit' => $commit,
 		'$web_location' => t('Running at web location') . ' ' . z_root(),
-		'$visit' => t('Please visit <a href="http://getzot.com">GetZot.com</a> to learn more about the Red Matrix.'),
+		'$visit' => t('Please visit <a href="https://redmatrix.me">RedMatrix.me</a> to learn more about the Red Matrix.'),
 		'$bug_text' => t('Bug reports and issues: please visit'),
 		'$bug_link_url' => 'https://github.com/friendica/red/issues',
 		'$bug_link_text' => 'redmatrix issues',

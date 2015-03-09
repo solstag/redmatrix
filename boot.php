@@ -49,14 +49,23 @@ define ( 'RED_PLATFORM',            'redmatrix' );
 define ( 'RED_VERSION',             trim(file_get_contents('version.inc')) . 'R');
 define ( 'ZOT_REVISION',            1     );
 
-define ( 'DB_UPDATE_VERSION',       1131  );
+define ( 'DB_UPDATE_VERSION',       1139  );
 
+/**
+ * Constant with a HTML line break.
+ *
+ * Contains a HTML line break (br) element and a real carriage return with line
+ * feed for the source.
+ * This can be used in HTML and JavaScript where needed a line break.
+ *
+ * @var string
+ */
 define ( 'EOL',                    '<br>' . "\r\n"        );
 define ( 'ATOM_TIME',              'Y-m-d\TH:i:s\Z'       );
 //define ( 'NULL_DATE',              '0000-00-00 00:00:00'  );
 define ( 'TEMPLATE_BUILD_PATH',    'store/[data]/smarty3' );
 
-define ( 'DIRECTORY_MODE_NORMAL',      0x0000);  // This is technically DIRECTORY_MODE_TERTIARY, but it's the default, hence 0x0000
+define ( 'DIRECTORY_MODE_NORMAL',      0x0000); // This is technically DIRECTORY_MODE_TERTIARY, but it's the default, hence 0x0000
 define ( 'DIRECTORY_MODE_PRIMARY',     0x0001);
 define ( 'DIRECTORY_MODE_SECONDARY',   0x0002);
 define ( 'DIRECTORY_MODE_STANDALONE',  0x0100);
@@ -72,10 +81,10 @@ define ( 'DIRECTORY_FALLBACK_MASTER',  'https://zothub.com');
 $DIRECTORY_FALLBACK_SERVERS = array( 
 	'https://zothub.com', 
 	'https://zotid.net', 
-	'https://redmatrix.nl', 
 	'https://red.zottel.red',
-	'https://red.pixelbits.de',
-	'https://whogotzot.com'
+	'https://redmatrix.info',
+	'https://my.federated.social',
+	'https://redmatrix.nl'
 );
 
 
@@ -212,7 +221,7 @@ define ( 'PAGE_NORMAL',            0x0000 );
 define ( 'PAGE_HIDDEN',            0x0001 );
 define ( 'PAGE_AUTOCONNECT',       0x0002 );
 define ( 'PAGE_APPLICATION',       0x0004 );
-define ( 'PAGE_DIRECTORY_CHANNEL', 0x0008 ); // system channel used for directory synchronisation
+define ( 'PAGE_ALLOWCODE',         0x0008 );
 define ( 'PAGE_PREMIUM',           0x0010 );
 define ( 'PAGE_ADULT',             0x0020 );
 define ( 'PAGE_CENSORED',          0x0040 ); // Site admin has blocked this channel from appearing in casual search results and site feeds
@@ -231,6 +240,8 @@ define ( 'PHOTO_PROFILE',          0x0001 );
 define ( 'PHOTO_XCHAN',            0x0002 );
 define ( 'PHOTO_THING',            0x0004 );
 define ( 'PHOTO_ADULT',            0x0008 );
+
+define ( 'PHOTO_FLAG_OS',          0x4000 );
 
 /**
  * Menu types
@@ -470,6 +481,13 @@ define ( 'NAMESPACE_YMEDIA',          'http://search.yahoo.com/mrss/' );
 
 define ( 'ACTIVITY_LIKE',        NAMESPACE_ACTIVITY_SCHEMA . 'like' );
 define ( 'ACTIVITY_DISLIKE',     NAMESPACE_ZOT   . '/activity/dislike' );
+define ( 'ACTIVITY_AGREE',       NAMESPACE_ZOT   . '/activity/agree' );
+define ( 'ACTIVITY_DISAGREE',    NAMESPACE_ZOT   . '/activity/disagree' );
+define ( 'ACTIVITY_ABSTAIN',     NAMESPACE_ZOT   . '/activity/abstain' );
+define ( 'ACTIVITY_ATTEND',      NAMESPACE_ZOT   . '/activity/attendyes' );
+define ( 'ACTIVITY_ATTENDNO',    NAMESPACE_ZOT   . '/activity/attendno' );
+define ( 'ACTIVITY_ATTENDMAYBE', NAMESPACE_ZOT   . '/activity/attendmaybe' );
+
 define ( 'ACTIVITY_OBJ_HEART',   NAMESPACE_ZOT   . '/activity/heart' );
 
 define ( 'ACTIVITY_FRIEND',      NAMESPACE_ACTIVITY_SCHEMA . 'make-friend' );
@@ -498,6 +516,8 @@ define ( 'ACTIVITY_OBJ_GROUP',   NAMESPACE_ACTIVITY_SCHEMA . 'group' );
 define ( 'ACTIVITY_OBJ_TAGTERM', NAMESPACE_ZOT  . '/activity/tagterm' );
 define ( 'ACTIVITY_OBJ_PROFILE', NAMESPACE_ZOT  . '/activity/profile' );
 define ( 'ACTIVITY_OBJ_THING',   NAMESPACE_ZOT  . '/activity/thing' );
+define ( 'ACTIVITY_OBJ_LOCATION',NAMESPACE_ZOT  . '/activity/location' );
+define ( 'ACTIVITY_OBJ_FILE',    NAMESPACE_ZOT  . '/activity/file' );
 
 /**
  * item weight for query ordering
@@ -543,7 +563,7 @@ define ( 'ITEM_DELAYED_PUBLISH', 0x0080);
 define ( 'ITEM_BUILDBLOCK',      0x0100);	// Named thusly to make sure nobody confuses this with ITEM_BLOCKED
 define ( 'ITEM_PDL',			 0x0200);	// Page Description Language - e.g. Comanche
 define ( 'ITEM_BUG',			 0x0400);	// Is a bug, can be used by the internal bug tracker
-define ( 'ITEM_PENDING_REMOVE',  0x0800);  // deleted, notification period has lapsed
+define ( 'ITEM_PENDING_REMOVE',  0x0800);   // deleted, notification period has lapsed
 
 /**
  * Item Flags
@@ -553,7 +573,7 @@ define ( 'ITEM_ORIGIN',          0x0001);
 define ( 'ITEM_UNSEEN',          0x0002);
 define ( 'ITEM_STARRED',         0x0004);
 define ( 'ITEM_UPLINK',          0x0008);
-define ( 'ITEM_UPLINK_PRV',      0x0010);
+define ( 'ITEM_CONSENSUS',       0x0010);  // an item which may present agree/disagree/abstain options
 define ( 'ITEM_WALL',            0x0020);
 define ( 'ITEM_THREAD_TOP',      0x0040);
 define ( 'ITEM_NOTSHOWN',        0x0080);  // technically visible but not normally shown (e.g. like/dislike)
@@ -634,7 +654,7 @@ class App {
 	public  $profile_uid = 0;              // If applicable, the channel_id of the "page owner"
 	public  $poi        = null;            // "person of interest", generally a referenced connection
 	public  $layout     = array();         // Comanche parsed template
-
+	public  $pdl        = null;
 	private $perms      = null;            // observer permissions
 	private $widgets    = array();         // widgets for this page
 	//private $widgetlist = null;            // widget ordering and inclusion directives
@@ -986,11 +1006,11 @@ class App {
 
 	function build_pagehead() {
 
-		$user_scalable = ((local_user()) ? get_pconfig(local_user(),'system','user_scalable') : 1);
+		$user_scalable = ((local_channel()) ? get_pconfig(local_channel(),'system','user_scalable') : 1);
 		if ($user_scalable === false)
 			$user_scalable = 1;
 
-		$interval = ((local_user()) ? get_pconfig(local_user(),'system','update_interval') : 80000);
+		$interval = ((local_channel()) ? get_pconfig(local_channel(),'system','update_interval') : 80000);
 		if($interval < 10000)
 			$interval = 80000;
 
@@ -1005,7 +1025,7 @@ class App {
 		$this->page['htmlhead'] = replace_macros($tpl, array(
 			'$user_scalable' => $user_scalable,
 			'$baseurl' => $this->get_baseurl(),
-			'$local_user' => local_user(),
+			'$local_channel' => local_channel(),
 			'$generator' => RED_PLATFORM . ' ' . RED_VERSION,
 			'$update_interval' => $interval,
 			'$icon' => head_get_icon(),
@@ -1013,6 +1033,7 @@ class App {
 			'$head_js' => head_get_js(),
 			'$js_strings' => js_strings(),
 			'$zid' => get_my_address(),
+			'$channel_id' => $this->profile['uid'],
 		)) . $this->page['htmlhead'];
 
 		// always put main.js at the end
@@ -1510,7 +1531,7 @@ function login($register = false, $form_id = 'main-login', $hiddens=false) {
 
 	$dest_url = $a->get_baseurl(true) . '/' . $a->query_string;
 
-	if(local_user()) {
+	if(local_channel()) {
 		$tpl = get_markup_template("logout.tpl");
 	}
 	else {
@@ -1532,7 +1553,7 @@ function login($register = false, $form_id = 'main-login', $hiddens=false) {
 		'$form_id'      => $form_id,
 		'$lname'        => array('username', t('Email') , '', ''),
 		'$lpassword'    => array('password', t('Password'), '', ''),
-		'$remember'     => array('remember', t('Remember me'), '', ''),
+		'$remember'     => array('remember', t('Remember me'), '', '',array(t('No'),t('Yes'))),
 		'$hiddens'      => $hiddens,
 		'$register'     => $reg,
 		'$lostpass'     => t('Forgot your password?'),
@@ -1577,14 +1598,17 @@ function get_account_id() {
 }
 
 /**
- * @brief Returns the entity id (channel_id) of locally logged in user or false.
+ * @brief Returns the entity id (channel_id) of locally logged in channel or false.
  *
  * Returns authenticated numeric channel_id if authenticated and connected to
  * a channel or 0. Sometimes referred to as $uid in the code.
  *
+ * Before 2.1 this function was called local_user().
+ *
+ * @since 2.1
  * @return int|bool channel_id or false
  */
-function local_user() {
+function local_channel() {
 	if((x($_SESSION, 'authenticated')) && (x($_SESSION, 'uid')))
 		return intval($_SESSION['uid']);
 
@@ -1592,16 +1616,47 @@ function local_user() {
 }
 
 /**
- * @brief Returns contact id (visitor_id) of authenticated site visitor or false.
+ * local_user() got deprecated and replaced by local_channel().
  *
- * @return int|bool visitor_id or false
+ * @deprecated since v2.1, use local_channel()
+ * @see local_channel()
  */
-function remote_user() {
+function local_user() {
+	logger('local_user() is DEPRECATED, use local_channel()');
+	return local_channel();
+}
+
+
+/**
+ * @brief Returns a xchan_hash (visitor_id) of remote authenticated visitor
+ * or false.
+ *
+ * Returns authenticated string hash of Red global identifier (xchan_hash), if
+ * authenticated via remote auth, or an empty string.
+ *
+ * Before 2.1 this function was called remote_user().
+ *
+ * @since 2.1
+ * @return string|bool visitor_id or false
+ */
+function remote_channel() {
 	if((x($_SESSION, 'authenticated')) && (x($_SESSION, 'visitor_id')))
 		return $_SESSION['visitor_id'];
 
 	return false;
 }
+
+/**
+ * remote_user() got deprecated and replaced by remote_channel().
+ *
+ * @deprecated since v2.1, use remote_channel()
+ * @see remote_channel()
+ */
+function remote_user() {
+	logger('remote_user() is DEPRECATED, use remote_channel()');
+	return remote_channel();
+}
+
 
 /**
  * Contents of $s are displayed prominently on the page the next time
@@ -1725,7 +1780,7 @@ function current_theme(){
 
 	// Find the theme that belongs to the channel whose stuff we are looking at
 
-	if($a->profile_uid && $a->profile_uid != local_user()) {
+	if($a->profile_uid && $a->profile_uid != local_channel()) {
 		$r = q("select channel_theme from channel where channel_id = %d limit 1",
 			intval($a->profile_uid)
 		);
@@ -1740,8 +1795,8 @@ function current_theme(){
 	// The default is for channel themes to take precedence over your own on pages belonging
 	// to that channel.
 
-	if($page_theme && local_user() && local_user() != $a->profile_url) {
-		if(get_pconfig(local_user(),'system','always_my_theme'))
+	if($page_theme && local_channel() && local_channel() != $a->profile_url) {
+		if(get_pconfig(local_channel(),'system','always_my_theme'))
 			$page_theme = null;
 	}
 
@@ -1992,10 +2047,23 @@ function load_pdl(&$a) {
 		if((! $s) && (($p = theme_include($n)) != ''))
 			$s = @file_get_contents($p);
 
-		if($s)
+		if($s) {
 			comanche_parser($a, $s);
+			$a->pdl = $s;
+		}
 	}
 }
+
+
+function exec_pdl(&$a) {
+	require_once('include/comanche.php');
+
+	if($a->pdl) {
+		comanche_parser($a, $a->pdl,1);
+	}
+}
+
+
 
 /**
  * @brief build the page.
@@ -2005,6 +2073,9 @@ function load_pdl(&$a) {
  * @param App &$a global application object
  */
 function construct_page(&$a) {
+
+
+	exec_pdl($a);
 
 	$comanche = ((count($a->layout)) ? true : false);
 
@@ -2019,6 +2090,7 @@ function construct_page(&$a) {
 	}
 
 	if($comanche) {
+
 		if($a->layout['nav']) {
 			$a->page['nav'] = get_custom_nav($a, $a->layout['nav']);
 		}
@@ -2068,6 +2140,7 @@ function construct_page(&$a) {
 		$arr = array('module' => $a->module, 'layout' => $a->layout);
 		call_hooks('construct_page', $arr);
 		$a->layout = $arr['layout'];
+
 
 		foreach($a->layout as $k => $v) {
 			if((strpos($k, 'region_') === 0) && strlen($v)) {
@@ -2161,4 +2234,127 @@ function get_directory_realm() {
 		return $x;
 
 	return DIRECTORY_REALM;
+}
+
+/**
+ * @brief Return the primary directory server.
+ *
+ * @return string
+ */
+function get_directory_primary() {
+
+   $dirmode = intval(get_config('system','directory_mode'));
+
+    if($dirmode == DIRECTORY_MODE_STANDALONE || $dirmode == DIRECTORY_MODE_PRIMARY) {
+		return z_root();
+    }
+
+	if($x = get_config('system', 'directory_primary'))
+		return $x;
+
+	return DIRECTORY_FALLBACK_MASTER;
+}
+
+
+
+/**
+ * @brief return relative date of last completed poller execution
+ */
+
+function get_poller_runtime() {
+	$t = get_config('system','lastpoll');
+	return relative_date($t);
+}
+
+function z_get_upload_dir() {
+	$upload_dir = get_config('system','uploaddir');
+	if(! $upload_dir)
+		$upload_dir = ini_get('upload_tmp_dir');
+	if(! $upload_dir)
+		$upload_dir = sys_get_temp_dir();
+	return $upload_dir;
+}
+
+function z_get_temp_dir() {
+	$temp_dir = get_config('system','tempdir');
+	if(! $temp_dir)
+		$temp_dir = sys_get_temp_dir();
+	return $upload_dir;
+}
+
+function z_check_cert() {
+	$a = get_app();
+	if(strpos(z_root(),'https://') !== false) {
+		$x = z_fetch_url(z_root() . '/siteinfo/json');
+		if(! $x['success']) {
+			$recurse = 0;
+			$y = z_fetch_url(z_root() . '/siteinfo/json',false,$recurse,array('novalidate' => true));
+			if($y['success'])
+				cert_bad_email();
+		}
+	}
+} 
+
+
+
+function cert_bad_email() {
+
+	$a = get_app();
+
+	$email_tpl = get_intltext_template("cert_bad_eml.tpl");
+	$email_msg = replace_macros($email_tpl, array(
+		'$sitename' => $a->config['system']['sitename'],
+		'$siteurl' =>  $a->get_baseurl(),
+		'$error' => t('Website SSL certificate is not valid. Please correct.')
+	));
+
+	$subject = email_header_encode(sprintf(t('[red] Website SSL error for %s'), $a->get_hostname()));
+	mail($a->config['system']['admin_email'], $subject, $email_msg,
+		'From: Administrator' . '@' . $a->get_hostname() . "\n"
+		. 'Content-type: text/plain; charset=UTF-8' . "\n"
+		. 'Content-transfer-encoding: 8bit' );
+
+}
+
+
+// send warnings every 3-5 days if cron is not running.
+
+
+function check_cron_broken() {
+
+	$t = get_config('system','lastpollcheck');
+	if(! $t) {
+		// never checked before. Start the timer.
+		set_config('system','lastpollcheck',datetime_convert());
+		return;
+	}
+	if($t > datetime_convert('UTC','UTC','now - 3 days')) {
+		// Wait for 3 days before we do anything so as not to swamp the admin with messages
+		return;
+	}
+
+	$d = get_config('system','lastpoll');
+	if(($d) && ($d > datetime_convert('UTC','UTC','now - 3 days'))) {
+		// Scheduled tasks have run successfully in the last 3 days.
+		set_config('system','lastpollcheck',datetime_convert());
+		return;
+	}
+
+	$a = get_app();
+
+	$email_tpl = get_intltext_template("cron_bad_eml.tpl");
+	$email_msg = replace_macros($email_tpl, array(
+		'$sitename' => $a->config['system']['sitename'],
+		'$siteurl' =>  $a->get_baseurl(),
+		'$error' => t('Cron/Scheduled tasks not running.'),
+		'$lastdate' => (($d)? $d : t('never'))
+	));
+
+	$subject = email_header_encode(sprintf(t('[red] Cron tasks not running on %s'), $a->get_hostname()));
+	mail($a->config['system']['admin_email'], $subject, $email_msg,
+		'From: Administrator' . '@' . $a->get_hostname() . "\n"
+		. 'Content-type: text/plain; charset=UTF-8' . "\n"
+		. 'Content-transfer-encoding: 8bit' );
+	set_config('system','lastpollcheck',datetime_convert());
+	return;
 }

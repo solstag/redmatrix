@@ -34,7 +34,7 @@ function identity_check_service_class($account_id) {
 
 	$ret['total_identities'] = intval($r[0]['total']);
 
-	if(! service_class_allows($account_id,'total_identities',$r[0]['total'])) {
+	if(! account_service_class_allows($account_id,'total_identities',$r[0]['total'])) {
 		$result['message'] .= upgrade_message();
 		return $result;
 	}
@@ -705,7 +705,7 @@ function profile_load(&$a, $nickname, $profile = '') {
 		$profile_fields_basic    = get_profile_fields_basic();
 		$profile_fields_advanced = get_profile_fields_advanced();
 
-		$advanced = ((feature_enabled(local_user(),'advanced_profiles')) ? true : false);
+		$advanced = ((feature_enabled(local_channel(),'advanced_profiles')) ? true : false);
 		if($advanced)
 			$fields = $profile_fields_advanced;
 		else
@@ -724,12 +724,13 @@ function profile_load(&$a, $nickname, $profile = '') {
 
 	$p[0]['extra_fields'] = $extra_fields;
 
-	$z = q("select xchan_photo_date from xchan where xchan_hash = '%s' limit 1",
+	$z = q("select xchan_photo_date, xchan_addr from xchan where xchan_hash = '%s' limit 1",
 		dbesc($p[0]['channel_hash'])
 	);
-	if($z)
+	if($z) {
 		$p[0]['picdate'] = $z[0]['xchan_photo_date'];
-
+		$p[0]['reddress'] = str_replace('@','&#xff20;',$z[0]['xchan_addr']);
+	}
 	
 	// fetch user tags if this isn't the default profile
 
@@ -760,8 +761,8 @@ function profile_load(&$a, $nickname, $profile = '') {
 
 	}
 
-	if(local_user()) {
-		$a->profile['channel_mobile_theme'] = get_pconfig(local_user(),'system', 'mobile_theme');
+	if(local_channel()) {
+		$a->profile['channel_mobile_theme'] = get_pconfig(local_channel(),'system', 'mobile_theme');
 		$_SESSION['mobile_theme'] = $a->profile['channel_mobile_theme'];
 	}
 
@@ -783,7 +784,7 @@ function profile_load(&$a, $nickname, $profile = '') {
 
 function profile_create_sidebar(&$a,$connect = true) {
 
-	$block = (((get_config('system','block_public')) && (! local_user()) && (! remote_user())) ? true : false);
+	$block = (((get_config('system','block_public')) && (! local_channel()) && (! remote_channel())) ? true : false);
 
 	$a->set_widget('profile',profile_sidebar($a->profile, $block, $connect));
 	return;
@@ -817,6 +818,7 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 	$location = false;
 	$address = false;
 	$pdesc = true;
+	$reddress = true;
 
 	if((! is_array($profile)) && (! count($profile)))
 		return $o;
@@ -824,7 +826,7 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 
 	head_set_icon($profile['thumb']);
 
-	$is_owner = (($profile['uid'] == local_user()) ? true : false);
+	$is_owner = (($profile['uid'] == local_channel()) ? true : false);
 
 	$profile['picdate'] = urlencode($profile['picdate']);
 
@@ -856,7 +858,8 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 		);
 
 
-		if(feature_enabled(local_user(),'multi_profiles')) {
+		$multi_profiles = feature_enabled(local_channel(), 'multi_profiles');
+		if($multi_profiles) {
 			$profile['edit'] = array($a->get_baseurl(). '/profiles', t('Profiles'),"", t('Manage/edit profiles'));
 			$profile['menu']['cr_new'] = t('Create New Profile');
 		}
@@ -864,11 +867,13 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 			$profile['edit'] = array($a->get_baseurl() . '/profiles/' . $profile['id'], t('Edit Profile'),'',t('Edit Profile'));
 						
 		$r = q("SELECT * FROM `profile` WHERE `uid` = %d",
-				local_user());
+				local_channel());
 		
 
 		if($r) {
 			foreach($r as $rr) {
+				if(!($multi_profiles || $rr['is_default']))
+					 continue;
 				$profile['menu']['entries'][] = array(
 					'photo'                => $rr['thumb'],
 					'id'                   => $rr['id'],
@@ -890,7 +895,7 @@ function profile_sidebar($profile, $block = 0, $show_connect = true) {
 		|| (x($profile,'country_name') == 1))
 		$location = t('Location:');
 
-	$profile['homepage'] = linkify($profile['homepage']);
+	$profile['homepage'] = linkify($profile['homepage'],true);
 
 	$gender   = ((x($profile,'gender')   == 1) ? t('Gender:')   : False);
 	$marital  = ((x($profile,'marital')  == 1) ? t('Status:')   : False);
@@ -902,8 +907,8 @@ logger('online: ' . $profile['online']);
 		$block = true;
 	}
 
-	if(($profile['hidewall'] && (! local_user()) && (! remote_user())) || $block ) {
-		$location = $pdesc = $gender = $marital = $homepage = $online = False;
+	if(($profile['hidewall'] && (! local_channel()) && (! remote_channel())) || $block ) {
+		$location = $reddress = $pdesc = $gender = $marital = $homepage = $online = False;
 	}
 
 	$firstname = ((strpos($profile['channel_name'],' '))
@@ -940,6 +945,9 @@ logger('online: ' . $profile['online']);
 
 	$tpl = get_markup_template('profile_vcard.tpl');
 
+	require_once('include/widgets.php');
+	$z = widget_rating(array('target' => $profile['channel_hash']));
+
 	$o .= replace_macros($tpl, array(
 		'$profile'       => $profile,
 		'$connect'       => $connect,
@@ -951,6 +959,8 @@ logger('online: ' . $profile['online']);
 		'$homepage'      => $homepage,
 		'$chanmenu'      => $channel_menu,
 		'$diaspora'      => $diaspora,
+		'$reddress'      => $reddress,
+		'$rating'        => $z,
 		'$contact_block' => $contact_block,
 	));
 
@@ -970,7 +980,7 @@ logger('online: ' . $profile['online']);
 		$a = get_app();
 		$o = '';
 
-		if(! local_user())
+		if(! local_channel())
 			return $o;
 
 		$bd_format = t('g A l F d') ; // 8 AM Friday January 18
@@ -980,7 +990,7 @@ logger('online: ' . $profile['online']);
 				LEFT JOIN `contact` ON `contact`.`id` = `event`.`cid`
 				WHERE `event`.`uid` = %d AND `type` = 'birthday' AND `start` < '%s' AND `finish` > '%s'
 				ORDER BY `start` ASC ",
-				intval(local_user()),
+				intval(local_channel()),
 				dbesc(datetime_convert('UTC','UTC','now + 6 days')),
 				dbesc(datetime_convert('UTC','UTC','now'))
 		);
@@ -1050,7 +1060,7 @@ logger('online: ' . $profile['online']);
 
 		$a = get_app();
 
-		if(! local_user())
+		if(! local_channel())
 			return $o;
 
 		$bd_format = t('g A l F d') ; // 8 AM Friday January 18
@@ -1059,7 +1069,7 @@ logger('online: ' . $profile['online']);
 		$r = q("SELECT `event`.* FROM `event`
 				WHERE `event`.`uid` = %d AND `type` != 'birthday' AND `start` < '%s' AND `start` > '%s'
 				ORDER BY `start` ASC ",
-				intval(local_user()),
+				intval(local_channel()),
 				dbesc(datetime_convert('UTC','UTC','now + 6 days')),
 				dbesc(datetime_convert('UTC','UTC','now - 1 days'))
 		);
@@ -1202,21 +1212,9 @@ function advanced_profile(&$a) {
 
 		if($txt = prepare_text($a->profile['dislikes'])) $profile['dislikes'] = array( t('Dislikes:'), $txt);
 
-
 		if($txt = prepare_text($a->profile['contact'])) $profile['contact'] = array( t('Contact information and Social Networks:'), $txt);
 
-		// Support tags in the other channels field (probably want to restrict it to channels only?)
-		$txt = $a->profile['channels'];
-		$matches = get_tags($txt);
-		$access_tag = '';
-		$str_tags = '';
-		foreach($matches as $m) {
-			$success = handle_tag($a, $txt, $access_tag, $str_tags, $a->profile_uid, $m);  // Use uid of the profile maker
-		}
-
-		if($txt = prepare_text($txt)) {
-			$profile['channels'] = array( t('My other channels:'), $txt);
-		}
+		if($txt = prepare_text($a->profile['channels'])) $profile['channels'] = array( t('My other channels:'), $txt);
 
 		if($txt = prepare_text($a->profile['music'])) $profile['music'] = array( t('Musical interests:'), $txt);
 		
@@ -1295,11 +1293,11 @@ function zid_init(&$a) {
 		proc_run('php','include/gprobe.php',bin2hex($tmp_str));
 		$arr = array('zid' => $tmp_str, 'url' => $a->cmd);
 		call_hooks('zid_init',$arr);		
-		if(! local_user()) {
+		if(! local_channel()) {
 			$r = q("select * from hubloc where hubloc_addr = '%s' order by hubloc_connected desc limit 1",
 				dbesc($tmp_str)
 			);
-			if($r && remote_user() && remote_user() === $r[0]['hubloc_hash'])
+			if($r && remote_channel() && remote_channel() === $r[0]['hubloc_hash'])
 				return;
 			logger('zid_init: not authenticated. Invoking reverse magic-auth for ' . $tmp_str);
 			// try to avoid recursion - but send them home to do a proper magic auth
@@ -1365,9 +1363,9 @@ function zid($s,$address = '') {
 
 function get_theme_uid() {
 	$uid = (($_REQUEST['puid']) ? intval($_REQUEST['puid']) : 0);
-	if(local_user()) {
-		if((get_pconfig(local_user(),'system','always_my_theme')) || (! $uid))
-			return local_user();
+	if(local_channel()) {
+		if((get_pconfig(local_channel(),'system','always_my_theme')) || (! $uid))
+			return local_channel();
 	}
 	if(! $uid) {
 		$x = get_sys_channel();
@@ -1430,7 +1428,7 @@ function get_online_status($nick) {
 
 	$ret = array('result' => false);
 
-	if(get_config('system','block_public') && ! local_user() && ! remote_user())
+	if(get_config('system','block_public') && ! local_channel() && ! remote_channel())
 		return $ret;
 
 	$r = q("select channel_id, channel_hash from channel where channel_address = '%s' limit 1",
@@ -1483,7 +1481,7 @@ function get_channel_by_nick($nick) {
 
 
 function identity_selector() {
-	if(local_user()) {
+	if(local_channel()) {
 		$r = q("select channel.*, xchan.* from channel left join xchan on channel.channel_hash = xchan.xchan_hash where channel.channel_account_id = %d and (channel_pageflags & %d) = 0 order by channel_name ",
 			intval(get_account_id()),
 			intval(PAGE_REMOVED)
@@ -1493,7 +1491,7 @@ function identity_selector() {
 			$account = get_app()->get_account();
 			$o = replace_macros(get_markup_template('channel_id_select.tpl'),array(
 				'$channels' => $r,
-				'$selected' => local_user()
+				'$selected' => local_channel()
 			));
 			return $o;
 		}
@@ -1504,7 +1502,7 @@ function identity_selector() {
 
 
 function is_public_profile() {
-	if(! local_user())
+	if(! local_channel())
 		return false;
 	if(intval(get_config('system','block_public')))
 		return false;
