@@ -30,17 +30,9 @@ section {
 	padding: 65px 7px 200px 7px;
 }
 
-section#region_2 div[id^='seq_content_'] {
-	display:none;
+.menu-item {
 }
 
-div#seq_content_1 {
-	display:block;
-}
-
-div#menu-item {
-}
-
-div#menu-item-active {
+.menu-item-active {
 	background-color: #E6E6E6;
 }
