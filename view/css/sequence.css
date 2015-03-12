@@ -25,14 +25,16 @@ aside#region_1 {
 
 section {
 	width: 100%;
-	display: table-cell;
+	display: block;
 	vertical-align: top;
 	padding: 65px 7px 200px 7px;
 }
 
-.menu-item {
-}
-
 .menu-item-active {
 	background-color: #E6E6E6;
+}
+
+div#seqtabs {
+	font-size: 20px;
+	line-height: 32px;
 }
