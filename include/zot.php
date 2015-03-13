@@ -469,7 +469,7 @@ function zot_refresh($them,$channel = null, $force = false) {
 				if($closeness === false)
 					$closeness = 80;
 
-				$y = q("insert into abook ( abook_account, abook_channel, abook_closeness, abook_xchan, abook_their_perms, abook_my_perms, abook_created, abook_updated, abook_dob, abook_flags ) values ( %d, %d, '%s', %d, %d, '%s', '%s', '%s', %d )",
+				$y = q("insert into abook ( abook_account, abook_channel, abook_closeness, abook_xchan, abook_their_perms, abook_my_perms, abook_created, abook_updated, abook_dob, abook_flags ) values ( %d, %d, %d, '%s', %d, %d, '%s', '%s', '%s', %d )",
 					intval($channel['channel_account_id']),
 					intval($channel['channel_id']),
 					intval($closeness),
@@ -1547,8 +1547,11 @@ function process_delivery($sender,$arr,$deliveries,$relay,$public = false,$reque
 
 		$channel = $r[0];
 
-		// allow public postings to the sys channel regardless of permissions
-		if(($channel['channel_pageflags'] & PAGE_SYSTEM) && (! $arr['item_private'])) {
+		// allow public postings to the sys channel regardless of permissions, but not
+		// for comments travelling upstream. Wait and catch them on the way down.
+		// They may have been blocked by the owner. 
+
+		if(($channel['channel_pageflags'] & PAGE_SYSTEM) && (! $arr['item_private']) && (! $relay)) {
 			$local_public = true;
 
 			$r = q("select xchan_flags from xchan where xchan_hash = '%s' limit 1",

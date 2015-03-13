@@ -13,7 +13,7 @@
 function admin_post(&$a){
 	logger('admin_post', LOGGER_DEBUG);
 
-	if(!is_site_admin()) {
+	if(! is_site_admin()) {
 		return;
 	}
 
@@ -79,7 +79,8 @@ function admin_post(&$a){
 function admin_content(&$a) {
 
 	logger('admin_content', LOGGER_DEBUG);
-	if(!is_site_admin()) {
+
+	if(! is_site_admin()) {
 		return login(false);
 	}
 
@@ -189,7 +190,7 @@ function admin_page_summary(&$a) {
 
 	// list total user accounts, expirations etc.
 	$accounts = array();
-	$r = q("SELECT COUNT(*) AS total, COUNT(IF(account_expires > %s, 1, NULL)) AS expiring, COUNT(IF(account_expires < %s AND account_expires != '%s', 1, NULL)) AS expired, COUNT(IF((account_flags & %d)>0, 1, NULL)) AS blocked FROM account",
+	$r = q("SELECT COUNT(*) AS total, COUNT(CASE WHEN account_expires > %s THEN 1 ELSE NULL END) AS expiring, COUNT(CASE WHEN account_expires < %s AND account_expires != '%s' THEN 1 ELSE NULL END) AS expired, COUNT(CASE WHEN (account_flags & %d)>0 THEN 1 ELSE NULL END) AS blocked FROM account",
 		db_utcnow(),
 		db_utcnow(),
 		dbesc(NULL_DATE),
@@ -208,7 +209,7 @@ function admin_page_summary(&$a) {
 
 	// available channels, primary and clones
 	$channels = array();
-	$r = q("SELECT COUNT(*) AS total, COUNT(IF(channel_primary = 1, 1, NULL)) AS main, COUNT(IF(channel_primary = 0, 1, NULL)) AS clones FROM channel WHERE NOT (channel_pageflags & %d)>0",
+	$r = q("SELECT COUNT(*) AS total, COUNT(CASE WHEN channel_primary = 1 THEN 1 ELSE NULL END) AS main, COUNT(CASE WHEN channel_primary = 0 THEN 1 ELSE NULL END) AS clones FROM channel WHERE NOT (channel_pageflags & %d)>0",
 		intval(PAGE_REMOVED)
 	);
 	if ($r) {
@@ -614,7 +615,7 @@ function admin_page_queue($a) {
 	}
 
 
-	$r = q("select count(outq_posturl) as total, outq_posturl from outq 
+	$r = q("select count(outq_posturl) as total, max(outq_priority) as priority, outq_posturl from outq 
 		where outq_delivered = 0 group by outq_posturl order by total desc");
 
 	for($x = 0; $x < count($r); $x ++) {
@@ -626,6 +627,7 @@ function admin_page_queue($a) {
 	$o = replace_macros(get_markup_template('admin_queue.tpl'), array(
 		'$banner' => t('Queue Statistics'),
 		'$numentries' => t('Total Entries'),
+		'$priority' => t('Priority'),
 		'$desturl' => t('Destination URL'),
 		'$nukehub' => t('Mark hub permanently offline'),
 		'$empty' => t('Empty queue for this hub'),

@@ -60,8 +60,11 @@ ACL.prototype.on_submit = function(){
 	});
 	$(that.deny_cid).each(function(i,v){
 		aclfields.append("<input type='hidden' name='contact_deny[]' value='"+v+"'>");
-	});	
+	});
 //	alert(aclfields);
+
+	//areYouSure jquery plugin: recheck the form here
+	$('form').trigger('checkform.areYouSure');
 
 }
 

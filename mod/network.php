@@ -13,6 +13,12 @@ function network_init(&$a) {
 		return;
 	}
 
+	if((count($_GET) < 2) || (count($_GET) < 3 && $_GET['JS'])) {
+		$network_options = get_pconfig(local_channel(),'system','network_page_default');
+		if($network_options)
+			goaway('network' . '?f=&' . $network_options);
+	}
+
 	$channel = $a->get_channel();
 	$a->profile_uid = local_channel();
 	head_set_icon($channel['xchan_photo_s']);
@@ -336,9 +342,11 @@ function network_content(&$a, $update = 0, $load = false) {
 		$sys = get_sys_channel();
 		$uids = " and item.uid  = " . intval($sys['channel_id']) . " ";
 		$a->data['firehose'] = intval($sys['channel_id']);
+		$abook_uids = "";
 	}
 	else {
 		$uids = " and item.uid = " . local_channel() . " ";
+		$abook_uids = " and abook.abook_channel = " . local_channel() . " ";
 	}
 
 	if(get_pconfig(local_channel(),'system','network_list_mode'))
@@ -369,10 +377,13 @@ function network_content(&$a, $update = 0, $load = false) {
 		// "New Item View" - show all items unthreaded in reverse created date order
 
 		$items = q("SELECT item.*, item.id AS item_id, received FROM item
-			WHERE true $uids AND item_restrict = 0
+			left join abook on item.author_xchan = abook.abook_xchan
+			WHERE true $uids $abook_uids AND item_restrict = 0
+			and ((abook.abook_flags & %d) = 0 or abook.abook_flags is null)
 			$simple_update
 			$sql_extra $sql_nets
-			ORDER BY item.received DESC $pager_sql "
+			ORDER BY item.received DESC $pager_sql ",
+			intval(ABOOK_FLAG_BLOCKED)
 		);
 
 		require_once('include/items.php');
@@ -398,7 +409,7 @@ function network_content(&$a, $update = 0, $load = false) {
 
 			$r = q("SELECT distinct item.id AS item_id, $ordering FROM item
 				left join abook on item.author_xchan = abook.abook_xchan
-				WHERE true $uids AND item.item_restrict = 0
+				WHERE true $uids $abook_uids AND item.item_restrict = 0
 				AND item.parent = item.id
 				and ((abook.abook_flags & %d) = 0 or abook.abook_flags is null)
 				$sql_extra3 $sql_extra $sql_nets
@@ -412,7 +423,7 @@ function network_content(&$a, $update = 0, $load = false) {
 				// update
 				$r = q("SELECT item.parent AS item_id FROM item
 					left join abook on item.author_xchan = abook.abook_xchan
-					WHERE true $uids AND item.item_restrict = 0 $simple_update
+					WHERE true $uids $abook_uids AND item.item_restrict = 0 $simple_update
 					and ((abook.abook_flags & %d) = 0 or abook.abook_flags is null)
 					$sql_extra3 $sql_extra $sql_nets ",
 					intval(ABOOK_FLAG_BLOCKED)
