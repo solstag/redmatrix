@@ -1,4 +1,8 @@
 <!DOCTYPE html >
+<?php
+require_once("mod/rpost.php");
+$rpost_div = '<div id="#rpost-data" style="display:none">' . rpost_content($a) . '</div>';
+?>
 <html>
 <head>
   <title><?php if(x($page,'title')) echo $page['title'] ?></title>
@@ -31,6 +35,8 @@
     $(activeid).addClass("menu-item-active");
     $(activeid+" a").click(function(e){e.preventDefault()});
     makeTabs( "#seqtabs" );
+    $( "#rpost-data" ).appendTo( $("#seqtabs-rpost") );
+    $( "#rpost-data" ).show();
   });
   </script>
 </head>
@@ -47,6 +53,7 @@
 		<aside id="region_3"><?php if(x($page,'right_aside')) echo $page['right_aside']; ?></aside>
 	</main>
 	<footer><?php if(x($page,'footer')) echo $page['footer']; ?></footer>
+    <?php echo $rpost_div ?>
 </body>
 </html>
 
