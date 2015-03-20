@@ -125,7 +125,9 @@ function photo_upload($channel, $observer, $args) {
 		return $ret;
 	}
 
-	$ph->orient($src);
+	$exif = $ph->orient($src);
+
+
 	@unlink($src);
 
 	$max_length = get_config('system','max_image_length');
@@ -203,12 +205,26 @@ function photo_upload($channel, $observer, $args) {
 
 	// Create item container
 
+	$lat = $lon = null;
+
+	if($exif && $exif['GPS']) {
+		if(feature_enabled($channel_id,'photo_location')) {
+			$lat = getGps($exif['GPS']['GPSLatitude'], $exif['GPS']['GPSLatitudeRef']);
+			$lon = getGps($exif['GPS']['GPSLongitude'], $exif['GPS']['GPSLongitudeRef']);
+		}
+	}
+
+
+
 	$item_flags = ITEM_WALL|ITEM_ORIGIN|ITEM_THREAD_TOP;
 	$item_restrict = (($visible) ? ITEM_VISIBLE : ITEM_HIDDEN);
 	$title = '';
 	$mid = item_message_id();
 
 	$arr = array();
+
+	if($lat && $lon)
+		$arr['coord'] = $lat . ' ' . $lon;
 
 	$arr['aid']           = $account_id;
 	$arr['uid']           = $channel_id;
@@ -479,3 +495,30 @@ function photos_create_item($channel, $creator_hash, $photo, $visible = false) {
 
 	return $item_id;
 }
+
+
+function getGps($exifCoord, $hemi) {
+
+    $degrees = count($exifCoord) > 0 ? gps2Num($exifCoord[0]) : 0;
+    $minutes = count($exifCoord) > 1 ? gps2Num($exifCoord[1]) : 0;
+    $seconds = count($exifCoord) > 2 ? gps2Num($exifCoord[2]) : 0;
+
+    $flip = ($hemi == 'W' or $hemi == 'S') ? -1 : 1;
+
+    return floatval($flip * ($degrees + ($minutes / 60) + ($seconds / 3600)));
+
+}
+
+function gps2Num($coordPart) {
+
+    $parts = explode('/', $coordPart);
+
+    if (count($parts) <= 0)
+        return 0;
+
+    if (count($parts) == 1)
+        return $parts[0];
+
+    return floatval($parts[0]) / floatval($parts[1]);
+}
+

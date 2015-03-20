@@ -736,7 +736,7 @@ function contact_block() {
 
 	if((! is_array($a->profile)) || ($a->profile['hide_friends']))
 		return $o;
-	$r = q("SELECT COUNT(abook_id) AS total FROM abook left join xchan on abook_xchan = xchan_hash WHERE abook_channel = %d and not ( abook_flags & %d )>0 and not (xchan_flags & %d)>0",
+	$r = q("SELECT COUNT(abook_id) AS total FROM abook left join xchan on abook_xchan = xchan_hash WHERE abook_channel = %d and ( abook_flags & %d ) = 0 and ( xchan_flags & %d ) = 0",
 			intval($a->profile['uid']),
 			intval($abook_flags),
 			intval($xchan_flags)
@@ -748,12 +748,10 @@ function contact_block() {
 		$contacts = t('No connections');
 		$micropro = null;
 	} else {
-		if(ACTIVE_DBTYPE == DBTYPE_POSTGRES) {
-			$randfunc = 'RANDOM()';
-		} else {
-			$randfunc = 'RAND()';
-		}
-		$r = q("SELECT abook.*, xchan.* FROM abook left join xchan on abook.abook_xchan = xchan.xchan_hash WHERE abook_channel = %d AND not ( abook_flags & %d)>0 and not (xchan_flags & %d )>0 ORDER BY $randfunc LIMIT %d",
+
+		$randfunc = db_getfunc('RAND');
+
+		$r = q("SELECT abook.*, xchan.* FROM abook left join xchan on abook.abook_xchan = xchan.xchan_hash WHERE abook_channel = %d AND ( abook_flags & %d ) = 0 and ( xchan_flags & %d ) = 0 ORDER BY $randfunc LIMIT %d",
 				intval($a->profile['uid']),
 				intval($abook_flags|ABOOK_FLAG_ARCHIVED),
 				intval($xchan_flags),
@@ -871,7 +869,7 @@ function valid_email($x){
 
 
 function linkify($s,$me = false) {
-	$s = preg_replace("/(https?\:\/\/[a-zA-Z0-9\:\/\-\?\&\;\.\=\_\@\~\#\'\%\$\!\+]*)/", (($me) ? ' <a href="$1" rel="me" >$1</a>' : ' <a href="$1" >$1</a>'), $s);
+	$s = preg_replace("/(https?\:\/\/[a-zA-Z0-9\:\/\-\?\&\;\.\=\_\@\~\#\'\%\$\!\+\,\@]*)/", (($me) ? ' <a href="$1" rel="me" >$1</a>' : ' <a href="$1" >$1</a>'), $s);
 	$s = preg_replace("/\<(.*?)(src|href)=(.*?)\&amp\;(.*?)\>/ism",'<$1$2=$3&$4>',$s);
 	return($s);
 }
