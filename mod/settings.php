@@ -19,6 +19,9 @@ function settings_init(&$a) {
 	if(! local_channel())
 		return;
 
+	if($_SESSION['delegate'])
+		return;
+
 	$a->profile_uid = local_channel();
 
 	// default is channel settings in the absence of other arguments
@@ -39,12 +42,12 @@ function settings_post(&$a) {
 	if(! local_channel())
 		return;
 
+	if($_SESSION['delegate'])
+		return;
+
 	$channel = $a->get_channel();
 
 	 logger('mod_settings: ' . print_r($_REQUEST,true));
-
-	if(x($_SESSION,'submanage') && intval($_SESSION['submanage']))
-		return;
 
 
 	if((argc() > 1) && (argv(1) === 'oauth') && x($_POST,'remove')){
@@ -550,14 +553,14 @@ function settings_post(&$a) {
 }
 		
 
-if(! function_exists('settings_content')) {
+
 function settings_content(&$a) {
 
 	$o = '';
 	nav_set_selected('settings');
 
 
-	if(! local_channel()) {
+	if((! local_channel()) || ($_SESSION['delegate'])) {
 		notice( t('Permission denied.') . EOL );
 		return login();
 	}
@@ -567,11 +570,6 @@ function settings_content(&$a) {
 	if($channel)
 		head_set_icon($channel['xchan_photo_s']);
 
-//	if(x($_SESSION,'submanage') && intval($_SESSION['submanage'])) {
-//		notice( t('Permission denied.') . EOL );
-//		return;
-//	}
-	
 	$yes_no = array(t('No'),t('Yes'));
 		
 	if((argc() > 1) && (argv(1) === 'oauth')) {
@@ -680,12 +678,10 @@ function settings_content(&$a) {
 			'$title'	=> t('Feature/Addon Settings'),
 			'$diaspora_enabled' => $diaspora_enabled,
 			'$dsprdesc' => t('Settings for the built-in Diaspora emulator'), 
-			'$pubcomments' => $pubcomments,
+			'$pubcomments' => array('dspr_pubcomment', t('Allow any Diaspora member to comment on your public posts'), $pubcomments, '', $yes_no),
 			'$dsprtitle' => t('Diaspora Policy Settings'),
-			'$dsprhelp' => t('Allow any Diaspora member to comment on your public posts.'),
-			'$dsprhijack' => t('Prevent your hashtags from being redirected to other sites'),
-			'$hijacking' => $hijacking,
-			'$dsprsubmit' => t('Submit Diaspora Policy Settings'),
+			'$hijacking' => array('dspr_hijack', t('Prevent your hashtags from being redirected to other sites'), $hijacking, '', $yes_no),
+			'$dsprsubmit' => t('Submit'),
 			'$settings_addons' => $settings_addons
 		));
 		return $o;
@@ -1137,5 +1133,5 @@ function settings_content(&$a) {
 
 		return $o;
 	}
-}}
+}
 

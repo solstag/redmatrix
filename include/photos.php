@@ -34,27 +34,9 @@ function photo_upload($channel, $observer, $args) {
 			$album = datetime_convert('UTC',date_default_timezone_get(),'now', 'Y-m');
 	}
 
-	/**
-	 *
-	 * We create a wall item for every photo, but we don't want to
-	 * overwhelm the data stream with a hundred newly uploaded photos.
-	 * So we will make the first photo uploaded to this album in the last several hours
-	 * visible by default, the rest will become visible over time when and if
-	 * they acquire comments, likes, dislikes, and/or tags 
-	 *
-	 */
-
-	$r = q("SELECT * FROM photo WHERE album = '%s' AND uid = %d AND created > %s - INTERVAL %s ",
-		dbesc($album),
-		intval($channel_id),
-		db_utcnow(), db_quoteinterval('3 HOUR')
-	);
-	if((! $r) || ($album == t('Profile Photos')))
+	if(intval($args['visible']) || $args['visible'] === 'true')
 		$visible = 1;
 	else
-		$visible = 0;
-
-	if(intval($args['not_visible']) || $args['not_visible'] === 'true')
 		$visible = 0;
 
 	$str_group_allow   = perms2str(((is_array($args['group_allow']))   ? $args['group_allow']   : explode(',',$args['group_allow'])));
@@ -143,7 +125,9 @@ function photo_upload($channel, $observer, $args) {
 		return $ret;
 	}
 
-	$ph->orient($src);
+	$exif = $ph->orient($src);
+
+
 	@unlink($src);
 
 	$max_length = get_config('system','max_image_length');
@@ -221,12 +205,26 @@ function photo_upload($channel, $observer, $args) {
 
 	// Create item container
 
+	$lat = $lon = null;
+
+	if($exif && $exif['GPS']) {
+		if(feature_enabled($channel_id,'photo_location')) {
+			$lat = getGps($exif['GPS']['GPSLatitude'], $exif['GPS']['GPSLatitudeRef']);
+			$lon = getGps($exif['GPS']['GPSLongitude'], $exif['GPS']['GPSLongitudeRef']);
+		}
+	}
+
+
+
 	$item_flags = ITEM_WALL|ITEM_ORIGIN|ITEM_THREAD_TOP;
 	$item_restrict = (($visible) ? ITEM_VISIBLE : ITEM_HIDDEN);
 	$title = '';
 	$mid = item_message_id();
 
 	$arr = array();
+
+	if($lat && $lon)
+		$arr['coord'] = $lat . ' ' . $lon;
 
 	$arr['aid']           = $account_id;
 	$arr['uid']           = $channel_id;
@@ -497,3 +495,30 @@ function photos_create_item($channel, $creator_hash, $photo, $visible = false) {
 
 	return $item_id;
 }
+
+
+function getGps($exifCoord, $hemi) {
+
+    $degrees = count($exifCoord) > 0 ? gps2Num($exifCoord[0]) : 0;
+    $minutes = count($exifCoord) > 1 ? gps2Num($exifCoord[1]) : 0;
+    $seconds = count($exifCoord) > 2 ? gps2Num($exifCoord[2]) : 0;
+
+    $flip = ($hemi == 'W' or $hemi == 'S') ? -1 : 1;
+
+    return floatval($flip * ($degrees + ($minutes / 60) + ($seconds / 3600)));
+
+}
+
+function gps2Num($coordPart) {
+
+    $parts = explode('/', $coordPart);
+
+    if (count($parts) <= 0)
+        return 0;
+
+    if (count($parts) == 1)
+        return $parts[0];
+
+    return floatval($parts[0]) / floatval($parts[1]);
+}
+
