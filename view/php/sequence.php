@@ -1,12 +1,13 @@
 <!DOCTYPE html >
 <?php
+$_SESSION['rpost'] = ["body"=>"Troque este texto pelo relato da sua experiência! Se preferir falar, anexe uma gravação de áudio sua, ou mesmo um vídeo.", "title"=>"Minha experiência no módulo", "remote_return"=>$a->get_baseurl() . $_SERVER[REQUEST_URI], "source"=>"Curso de Atenção Plena",];
 require_once("mod/rpost.php");
-$rpost_div = '<div id="#rpost-data" style="display:none">' . rpost_content($a) . '</div>';
+$rpost_div = '<div id="rpost-data" style="display:none">' . rpost_content($a) . '</div>';
 ?>
 <html>
 <head>
   <title><?php if(x($page,'title')) echo $page['title'] ?></title>
-  <?php if(x($page,'htmlhead')) echo $page['htmlhead'] ?>
+  <?php if(x($a->page,'htmlhead')) echo $a->page['htmlhead'] ?>
   <link rel="stylesheet" href="//code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css">
   <!-- script src="//code.jquery.com/jquery-1.10.2.js"></script -->
   <script src="//code.jquery.com/ui/1.11.3/jquery-ui.js"></script>
@@ -35,8 +36,7 @@ $rpost_div = '<div id="#rpost-data" style="display:none">' . rpost_content($a) .
     $(activeid).addClass("menu-item-active");
     $(activeid+" a").click(function(e){e.preventDefault()});
     makeTabs( "#seqtabs" );
-    $( "#rpost-data" ).appendTo( $("#seqtabs-rpost") );
-    $( "#rpost-data" ).show();
+    $( "#rpost-data" ).appendTo( $("#seqtabs-rpost") ).show();
   });
   </script>
 </head>
