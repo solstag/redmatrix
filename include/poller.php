@@ -41,6 +41,12 @@ function poller_run($argv, $argc){
 	// run queue delivery process in the background
 
 	proc_run('php',"include/queue.php");
+
+
+	// maintenance for mod sharedwithme - check for updated items and remove them
+
+	require_once('include/sharedwithme.php');
+	apply_updates();
 	
 
 	// expire any expired mail
@@ -82,11 +88,13 @@ function poller_run($argv, $argc){
 	}
 
 	// publish any applicable items that were set to be published in the future
-	// (time travel posts)
+	// (time travel posts). Restrict to items that have come of age in the last
+	// couple of days to limit the query to something reasonable. 
 
-	$r = q("select id from item where ( item_restrict & %d ) > 0 and created <= %s ",
+	$r = q("select id from item where ( item_restrict & %d ) > 0 and created <= %s  and created > '%s' ",
 		intval(ITEM_DELAYED_PUBLISH),
-		db_utcnow()
+		db_utcnow(),
+		dbesc(datetime_convert('UTC','UTC','now - 2 days'))
 	);
 	if($r) {
 		foreach($r as $rr) {

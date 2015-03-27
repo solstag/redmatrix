@@ -1309,13 +1309,13 @@ function generate_map($coord) {
 	$coord = str_replace(array(',','/','  '),array(' ',' ',' '),$coord);
 	$arr = array('lat' => trim(substr($coord,0,strpos($coord,' '))), 'lon' => trim(substr($coord,strpos($coord,' ')+1)), 'html' => '');
 	call_hooks('generate_map',$arr);
-	return $arr['html'];
+	return (($arr['html']) ? $arr['html'] : $coord);
 }
 
 function generate_named_map($location) {
 	$arr = array('location' => $location, 'html' => '');
 	call_hooks('generate_named_map',$arr);
-	return $arr['html'];
+	return (($arr['html']) ? $arr['html'] : $location);
 }
 
 
@@ -1855,9 +1855,13 @@ function check_webbie($arr) {
 
 function ids_to_querystr($arr,$idx = 'id') {
 	$t = array();
-	foreach($arr as $x)
-		$t[] = $x[$idx];
-
+	if($arr) {
+		foreach($arr as $x) {
+			if(! in_array($x[$idx],$t)) {
+				$t[] = $x[$idx];
+			}
+		}
+	}
 	return(implode(',', $t));
 }
 
@@ -2101,7 +2105,7 @@ function extra_query_args() {
  *
  * @return boolean true if replaced, false if not replaced
  */
-function handle_tag($a, &$body, &$access_tag, &$str_tags, $profile_uid, $tag) {
+function handle_tag($a, &$body, &$access_tag, &$str_tags, $profile_uid, $tag, $diaspora = false) {
 
 	$replaced = false;
 	$r = null;
@@ -2169,7 +2173,7 @@ function handle_tag($a, &$body, &$access_tag, &$str_tags, $profile_uid, $tag) {
 	if(strpos($tag,'@') === 0) {
 
 		// The @! tag will alter permissions
-		$exclusive = ((strpos($tag,'!') === 1) ? true : false);
+		$exclusive = ((strpos($tag,'!') === 1 && (! $diaspora)) ? true : false);
 
 		//is it already replaced?
 		if(strpos($tag,'[zrl='))
@@ -2198,10 +2202,19 @@ function handle_tag($a, &$body, &$access_tag, &$str_tags, $profile_uid, $tag) {
 		// Here we're looking for an address book entry as provided by the auto-completer
 		// of the form something+nnn where nnn is an abook_id or the first chars of xchan_hash
 
-		if(strrpos($newname,'+')) {
+
+		// If there's a +nnn in the string make sure there isn't a space preceding it
+
+		$t1 = strpos($newname,' ');
+		$t2 = strrpos($newname,'+');
+
+		if($t1 && $t2 && $t1 < $t2)
+			$t2 = 0;
+
+		if(($t2) && (! $diaspora)) {
 			//get the id
 
-			$tagcid = substr($newname,strrpos($newname,'+') + 1);
+			$tagcid = substr($newname,$t2 + 1);
 
 			if(strrpos($tagcid,' '))
 				$tagcid = substr($tagcid,0,strrpos($tagcid,' '));
@@ -2346,7 +2359,7 @@ function handle_tag($a, &$body, &$access_tag, &$str_tags, $profile_uid, $tag) {
 	return array('replaced' => $replaced, 'termtype' => $termtype, 'term' => $newname, 'url' => $url, 'contact' => $r[0]);
 }
 
-function linkify_tags($a, &$body, $uid) {
+function linkify_tags($a, &$body, $uid, $diaspora = false) {
 	$str_tags = '';
 	$tagged = array();
 	$results = array();
@@ -2370,8 +2383,7 @@ function linkify_tags($a, &$body, $uid) {
 			if($fullnametagged)
 				continue;
 
-			// @FIXME which $profile_uid? It's not set anywhere.
-			$success = handle_tag($a, $body, $access_tag, $str_tags, ($uid) ? $uid : $profile_uid , $tag); 
+			$success = handle_tag($a, $body, $access_tag, $str_tags, ($uid) ? $uid : $a->profile_uid , $tag, $diaspora); 
 			$results[] = array('success' => $success, 'access_tag' => $access_tag);
 			if($success['replaced']) $tagged[] = $tag;
 		}

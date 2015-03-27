@@ -184,6 +184,8 @@ function hubloc_mark_as_down($posturl) {
 
 function xchan_store($arr) {
 
+	logger('xchan_store: ' . print_r($arr,true));
+
 	if(! $arr['hash'])
 		$arr['hash'] = $arr['guid'];
 	if(! $arr['hash'])
@@ -202,7 +204,7 @@ function xchan_store($arr) {
 	if(! $arr['url'])
 		$arr['url'] = z_root();
 	if(! $arr['photo'])
-		$arr['photo'] = get_default_profile_photo();
+		$arr['photo'] = z_root() . '/' . get_default_profile_photo();
 
 	$r = q("insert into xchan ( xchan_hash, xchan_guid, xchan_guid_sig, xchan_pubkey, xchan_addr, xchan_url, xchan_connurl, xchan_follow, xchan_connpage, xchan_name, xchan_network, xchan_instance_url, xchan_flags, xchan_name_date ) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s','%s','%s','%s',%d,'%s') ",
 		dbesc($arr['hash']),
@@ -256,12 +258,12 @@ function xchan_fetch($arr) {
 	if(! $key)
 		return false;
 
-	$r = q("select * from xchan where $key = '$v'");
+	$r = q("select * from xchan where $key = '$v' limit 1");
 	if(! $r)
 		return false;
 
 	$ret = array();
-	foreach($r as $k => $v) {
+	foreach($r[0] as $k => $v) {
 		if($k === 'xchan_addr')
 			$ret['address'] = $v;
 		else

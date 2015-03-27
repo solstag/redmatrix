@@ -96,10 +96,6 @@ if(! $a->install) {
 		$nav_icon_colour = "#999";
 	if (! $nav_active_icon_colour)
 		$nav_active_icon_colour = "#fff";
-	if (! $navmenu_bgchover)
-		$navmenu_bgchover = "#f5f5f5";
-	if (! $navmenu_bgimage)
-		$navmenu_bgimage = "";
 	if (! $navtabs_borderc)
 		$navtabs_borderc = "rgba(204,204,204,0.8)";
 	if (! $navtabs_fontcolour)
@@ -174,16 +170,6 @@ if(! $a->install) {
 		$notif_itemcolour = "#000";
 	if (! $notif_itemhovercolour)
 		$notif_itemhovercolour = "#000";
-	if (! $editbuttons_bgcolour)
-		$editbuttons_bgcolour = "transparent";
-	if (! $editbuttons_bordercolour)
-		$editbuttons_bordercolour = "#ccc";
-	if (! $editbuttons_bordercolourhover)
-		$editbuttons_bordercolourhover = "#adadad";
-	if (! $editbuttons_colour)
-		$editbuttons_colour = "#333";
-	if (! $editbuttons_bghover)
-		$editbuttons_bghover = "#ebebeb";
 	if (! $dropdown_bgcolour)
 		$dropdown_bgcolour = "#FFF";
 	if (! $dropdown_textcolour)
@@ -210,58 +196,21 @@ if(! $a->install) {
 		$acpopup_tgbl_bgcolour = "#ddddff";
 	if (! $acpopup_hovercolour)
 		$acpopup_hovercolour = "#000";
-	if (! $notify_bgcolour)
-		$notify_bgcolour = "#fff";
-	if (! $notify_linkcolour)
-		$notify_linkcolour = "#333";	
-	if (! $notify_bghover)
-		$notify_bghover = "#e7e7e7";
-	if (! $notifyseen_bgcolour)
-		$notifyseen_bgcolour = "#ddd";
-	if (! $notifyseen_linkcolour)
-		$notifyseen_linkcolour = "#333";
-	if (! $notifyseen_bghover)
-		$notifyseen_bghover = "#e7e7e7";
-	if (! $notifyseen_linkhover)
-		$notifyseen_linkhover = "#333";
-	if (! $notify_topmargin)
-		$notify_topmargin = "1px";
-	if (! $input_bgsubmit)
-		$input_bgsubmit = "#F0F0F0";
-	if (! $input_linksubmit)
-		$input_linksubmit = "#0080FF";
-	if (! $input_border)
-		$input_border = "#ccc";
-	if (! $input_colourhover)
-		$input_colourhover = "#333";
-	if (! $input_decohover)
-		$input_decohover = "none";
+
 	if (! $radius)
 		$radius = "4";
 	if (! $shadow)
 		$shadow = "0";
 	if(! $active_colour)
 		$active_colour = "#fff";
-	if (! $converse_width) {
+	if (! $converse_width)
 		$converse_width = "1024";
-	}
-	if (! $acl_bgcolour)
-		$acl_bgcolour = "#fff";
-	if (! $acl_bordercolour)
-		$acl_bordercolour = "#ccc";
-	if (! $aclbutton_linkcolour)
-		$aclbutton_linkcolour = "";
-	if (! $abookself_bgcolour)
-		$abookself_bgcolour = "#ffdddd";
 	if(! $top_photo)
 		$top_photo = '48px';
 	if(! $comment_indent)
 		$comment_indent = '0px';
 	if(! $reply_photo)
 		$reply_photo = '32px';
-	if(! $infomess_bgcolour)
-		$infomess_bgcolour = "#F0F0F0";
-
 
 	if($nav_min_opacity === false || $nav_min_opacity === '') {
 		$nav_float_min_opacity = 1.0;
@@ -292,8 +241,6 @@ $options = array (
 '$nav_bd' => $nav_bd,
 '$nav_icon_colour' => $nav_icon_colour,
 '$nav_active_icon_colour' => $nav_active_icon_colour,
-'$navmenu_bgchover' => $navmenu_bgchover,
-'$navmenu_bgimage' => $navmenu_bgimage,
 '$navtabs_borderc' => $navtabs_borderc,
 '$navtabs_fontcolour' => $navtabs_fontcolour,
 '$navtabs_bgcolour' => $navtabs_bgcolour,
@@ -331,11 +278,6 @@ $options = array (
 '$pre_txtcolour' => $pre_txtcolour,
 '$notif_itemcolour' => $notif_itemcolour,
 '$notif_itemhovercolour' => $notif_itemhovercolour,
-'$editbuttons_bgcolour' => $editbuttons_bgcolour,
-'$editbuttons_bordercolour' => $editbuttons_bordercolour,
-'$editbuttons_bordercolourhover' => $editbuttons_bordercolourhover,
-'$editbuttons_colour' => $editbuttons_colour,
-'$editbuttons_bghover' => $editbuttons_bghover,
 '$dropdown_bgcolour' => $dropdown_bgcolour,
 '$dropdown_textcolour' => $dropdown_textcolour,
 '$dropdown_txtcolhover' => $dropdown_txtcolhover,
@@ -349,32 +291,14 @@ $options = array (
 '$acpopup_bordercolour' => $acpopup_bordercolour,
 '$acpopup_tgbl_bgcolour' => $acpopup_tgbl_bgcolour,
 '$acpopup_hovercolour' => $acpopup_hovercolour,
-'$notify_bgcolour' => $notify_bgcolour,
-'$notify_linkcolour' => $notify_linkcolour,
-'$notify_bghover' => $notify_bghover,
-'$notifyseen_bgcolour' => $notifyseen_bgcolour,
-'$notifyseen_linkcolour' => $notifyseen_linkcolour,
-'$notifyseen_bghover' => $notifyseen_bghover,
-'$notifyseen_linkhover' => $notifyseen_linkhover,
-'$notify_topmargin' => $notify_topmargin,
-'$input_bgsubmit' => $input_bgsubmit,
-'$input_linksubmit' => $input_linksubmit,
-'$input_border' => $input_border,
-'$input_colourhover' => $input_colourhover,
-'$input_decohover' => $input_decohover,
 '$radius' => $radius,
 '$shadow' => $shadow,
 '$active_colour' => $active_colour,
 '$converse_width' => $converse_width,
-'$acl_bgcolour' => $acl_bgcolour,
-'$acl_bordercolour' => $acl_bordercolour,
-'$aclbutton_linkcolour' => $aclbutton_linkcolour,
-'$abookself_bgcolour' => $abookself_bgcolour,
 '$nav_float_min_opacity' => $nav_float_min_opacity,
 '$nav_percent_min_opacity' => $nav_percent_min_opacity,
 '$top_photo' => $top_photo,
 '$reply_photo' => $reply_photo,
-'$infomess_bgcolour' => $infomess_bgcolour,
 '$pmenu_top' => $pmenu_top,
 '$pmenu_reply' => $pmenu_reply,
 '$comment_indent' => $comment_indent,

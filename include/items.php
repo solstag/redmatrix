@@ -3931,15 +3931,19 @@ function item_expire($uid,$days) {
 
 	$expire_network_only = 1;
 
-	$sql_extra = ((intval($expire_network_only)) ? " AND not (item_flags & " . intval(ITEM_WALL) . ")>0 " : "");
+	$expire_limit = get_config('system','expire_limit');
+	if(! intval($expire_limit))
+		$expire_limit = 5000;
+
+	$sql_extra = ((intval($expire_network_only)) ? " AND (item_flags & " . intval(ITEM_WALL) . ") = 0 " : "");
 
 	$r = q("SELECT * FROM `item` 
 		WHERE `uid` = %d 
 		AND `created` < %s - INTERVAL %s 
 		AND `id` = `parent` 
 		$sql_extra
-		AND NOT ( item_flags & %d )>0
-		AND (item_restrict = 0 ) ",
+		AND ( item_flags & %d ) = 0
+		AND ( item_restrict = 0 ) LIMIT $expire_limit ",
 		intval($uid),
 		db_utcnow(), db_quoteinterval(intval($days).' DAY'),
 		intval(ITEM_RETAINED)
@@ -4375,12 +4379,11 @@ function zot_feed($uid,$observer_xchan,$arr) {
 		$sql_extra = item_permissions_sql($uid);
 	}
 
+	$limit = " LIMIT 100 ";
+
 	if($mindate != NULL_DATE) {
 		$sql_extra .= " and ( created > '$mindate' or edited > '$mindate' ) ";
-		$limit = "";
 	}
-	else
-		$limit = " limit 0, 50 ";
 
 	if($message_id) {
 		$sql_extra .= " and mid = '" . dbesc($message_id) . "' ";
@@ -4391,20 +4394,20 @@ function zot_feed($uid,$observer_xchan,$arr) {
 
 	if(is_sys_channel($uid)) {
 		require_once('include/security.php');
-		$r = q("SELECT distinct parent, created from item
+		$r = q("SELECT parent, created from item
 			WHERE uid != %d
-			and uid in (" . stream_perms_api_uids(PERMS_PUBLIC) . ") AND item_restrict = 0 
-			AND (item_flags &  %d)>0 
-			and item_private = 0 $sql_extra ORDER BY created ASC $limit",
+			AND item_private = 0 AND item_restrict = 0 AND uid in (" . stream_perms_api_uids(PERMS_PUBLIC,10,1) . ") 
+			AND (item_flags &  %d) > 0 
+			$sql_extra GROUP BY parent ORDER BY created ASC $limit",
 			intval($uid),
 			intval(ITEM_WALL)
 		);
 	}
 	else {
-		$r = q("SELECT distinct parent, created from item
+		$r = q("SELECT parent, created from item
 			WHERE uid = %d AND item_restrict = 0
-			AND (item_flags &  %d)>0 
-			$sql_extra ORDER BY created ASC $limit",
+			AND (item_flags &  %d) > 0 
+			$sql_extra GROUP BY parent ORDER BY created ASC $limit",
 			intval($uid),
 			intval(ITEM_WALL)
 		);

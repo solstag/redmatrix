@@ -16,10 +16,6 @@
 		$nav_icon_colour = "#32962D";
 	if (! $nav_active_icon_colour)
 		$nav_active_icon_colour = "#50f148";
-	if (! $navmenu_bgchover)
-		$navmenu_bgchover = "#143D12";
-	if (! $navmenu_bgimage)
-		$navmenu_bgimage = "background-image: none;";
 	if (! $navtabs_borderc)
 		$navtabs_borderc = "#143D12";
 	if (! $navtabs_fontcolour)
@@ -96,14 +92,6 @@ if (! $navaside_bghover)
 		$acpopup_tgbl_bgcolour = "#000";
 	if (! $acpopup_hovercolour)
 		$acpopup_hovercolour = "#50f148";
-	if (! $editbuttons_bgcolour)
-		$editbuttons_bgcolour = "#000";
-	if (! $editbuttons_bordercolour)
-		$editbuttons_bordercolour = "#143D12";
-	if (! $editbuttons_colour)
-		$editbuttons_colour = "#32962D";
-	if (! $editbuttons_bghover)
-		$editbuttons_bghover = "#000";
 	if (! $dropdown_bgcolour)
 		$dropdown_bgcolour = "#000";
 	if (! $dropdown_textcolour)
@@ -122,39 +110,14 @@ if (! $navaside_bghover)
 		$dropdown_bordercol = "#143D12";
 	if (! $preview_backgroundimg)
 		$preview_backgroundimg = "gray_and_black_diagonal_stripes_background_seamless.gif";
-	if (! $notify_bgcolour)
-		$notify_bgcolour = "#000";
-	if (! $notify_linkcolour)
-		$notify_linkcolour = "#50f148";	
-	if (! $notify_bghover)
-		$notify_bghover = "#000";
-	if (! $notify_topmargin)
-		$notify_topmargin = "-1px";
-	if (! $notifyseen_bgcolour)
-		$notifyseen_bgcolour = "#000";
-	if (! $notifyseen_linkcolour)
-		$notifyseen_linkcolour = "#000";
-	if (! $notifyseen_bghover)
-		$notifyseen_bghover = "#000";
-	if (! $notifyseen_linkhover)
-		$notifyseen_linkhover = "#50f148";
-	if (! $input_bgsubmit)
-		$input_bgsubmit = "#000";
-	if (! $input_linksubmit)
-		$input_linksubmit = "#50f148";
-	if (! $input_border)
-		$input_border = "#143D12";
-	if (! $input_colourhover)
-		$input_colourhover = "#50f148";
-	if (! $input_decohover)
-		$input_decohover = "underline";
-	if (! $acl_bgcolour)
-		$acl_bgcolour = "#000";
-	if (! $acl_bordercolour)
-		$acl_bordercolour = "#000";
-	if (! $aclbutton_linkcolour)
-		$aclbutton_linkcolour = "color: #fff;";
-	if (! $abookself_bgcolour)
-		$abookself_bgcolour = "#000";
-	if(! $infomess_bgcolour)
-		$infomess_bgcolour = "#000";
+
+
+
+
+
+
+
+
+
+
+
