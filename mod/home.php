@@ -17,8 +17,10 @@ function home_init(&$a) {
 		$dest = $channel['channel_startpage'];
 		if(! $dest)
 			$dest = get_pconfig(local_channel(),'system','startpage');
-		if(! $dest)
-			$dest = get_config('system','startpage');
+		if(! $dest) {
+			if ($a->account['account_service_class'] === 'ppsus')
+				$dest = get_config('system','startpage');
+		}
 		if(! $dest)
 			$dest = z_root() . '/apps';
 
