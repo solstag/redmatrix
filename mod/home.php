@@ -19,8 +19,12 @@ function home_init(&$a) {
 			$dest = get_pconfig(local_channel(),'system','startpage');
 		if(! $dest) {
 			if ($a->account['account_service_class'] === 'ppsus')
-				$dest = get_config('system','startpage');
+				$dest = '/page/mboi/rede';
+			elseif ($a->account['account_service_class'] === 'fpmboi')
+				$dest = '/channel/pesquisadoresmboi';
 		}
+		if(! $dest)
+			$dest = get_config('system','startpage');
 		if(! $dest)
 			$dest = z_root() . '/apps';
 

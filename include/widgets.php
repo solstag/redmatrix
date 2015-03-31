@@ -969,3 +969,12 @@ function widget_pubsites() {
 		return;
 	return '<div class="widget"><ul class="nav nav-pills"><li><a href="pubsites">' . t('Public Hubs') . '</a></li></ul></div>';
 }
+
+function widget_mobiliza($args) {
+	$o = '';
+	if ($a->account['account_service_class'] === 'ppsus')
+		$o .= '<div class="widget"><p><a href="/">Portal Mobiliza</a></p></div>';
+	elseif ($a->account['account_service_class'] === 'fpmboi')
+		$o .= '<div class="widget"><p><a href="/">Fórum Pesquisadores</a></p></div>';
+	return $o;
+}

@@ -20,9 +20,7 @@
 
 	</div>
 </div>
-<div class="widget">
-<p><a href="/">Portal Mobiliza</a></p>
-</div>
+
 
 
 
