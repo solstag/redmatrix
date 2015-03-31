@@ -972,9 +972,12 @@ function widget_pubsites() {
 
 function widget_mobiliza($args) {
 	$o = '';
-	if ($a->account['account_service_class'] === 'ppsus')
+	$a = get_app();
+	if ($a->account['account_service_class'] === 'ppsus'){
 		$o .= '<div class="widget"><p><a href="/">Portal Mobiliza</a></p></div>';
-	elseif ($a->account['account_service_class'] === 'fpmboi')
+	}
+	elseif ($a->account['account_service_class'] === 'fpmboi'){
 		$o .= '<div class="widget"><p><a href="/">Fórum Pesquisadores</a></p></div>';
+	}
 	return $o;
 }
