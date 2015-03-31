@@ -346,6 +346,7 @@ footer {
 	-moz-border-radius: $radiuspx;
 	-webkit-border-radius: $radiuspx;
 	border-radius: $radiuspx;
+	word-wrap: break-word;
 }
 
 .vcard dl  {
@@ -491,10 +492,6 @@ footer {
 
 .directory-details {
 	font-size: 0.7em;
-}
-
-#colorbox {
-	padding: 5px;
 }
 
 .app-name {
@@ -962,10 +959,20 @@ nav .acpopup {
 	background: none repeat scroll 0% 0% #FCF8E3 !important;
 }
 
+#cboxOverlay {
+	z-index: 1050;
+}
+
 #colorbox {
+	z-index: 1051;
+}
+
+#cboxContent {
+	padding: 3px;
 	border: 0px solid #fff;
+	border-radius: $radiuspx;
 	background-color: #fff;
-	z-index: 9;
+	z-index: 1052;
 }
 
 .settings-block {
@@ -2214,15 +2221,19 @@ aside .nav > li > a:hover, aside .nav > li > a:focus {
 }
 
 /* Modified original CSS to match input in Redbasic */
-.bootstrap-tagsinput {
+.jothidden .bootstrap-tagsinput {
 	border-color:#fff;
 	background-color: #fff;
 	box-shadow: none;
 	display: inline-block;
 	border-radius: $radiuspx;
 	cursor: text;
-	padding: 0 6px;
-	width: 70% !important;
+	padding: 0px 8px;
+	width: 100%;
+}
+
+.bootstrap-tagsinput .label {
+	font-size: 100%;
 }
 
 .jothidden .bootstrap-tagsinput:hover, .jothidden .bootstrap-tagsinput:focus {
