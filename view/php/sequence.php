@@ -1,9 +1,4 @@
 <!DOCTYPE html >
-<?php
-$_SESSION['rpost'] = ["body"=>"Troque este texto pelo relato da sua experiência! Se preferir falar, anexe uma gravação de áudio sua, ou mesmo um vídeo.", "title"=>"Minha experiência no módulo", "remote_return"=>$a->get_baseurl() . $_SERVER[REQUEST_URI], "source"=>"Curso de Atenção Plena",];
-require_once("mod/rpost.php");
-$rpost_div = '<div id="rpost-data" style="display:none">' . rpost_content($a) . '</div>';
-?>
 <html>
 <head>
   <title><?php if(x($page,'title')) echo $page['title'] ?></title>
@@ -46,14 +41,15 @@ $rpost_div = '<div id="rpost-data" style="display:none">' . rpost_content($a) . 
 	<main>
 		<aside id="region_1"><?php if(x($page,'aside')) echo $page['aside']; ?></aside>
 		<section id="region_2">
+
 			<?php if(x($page,'content')) echo $page['content']; ?>
+
 			<div id="page-footer"></div>
 			<div id="pause"></div>
 		</section>
 		<aside id="region_3"><?php if(x($page,'right_aside')) echo $page['right_aside']; ?></aside>
 	</main>
 	<footer><?php if(x($page,'footer')) echo $page['footer']; ?></footer>
-    <?php echo $rpost_div ?>
 </body>
 </html>
 
@@ -63,29 +59,5 @@ Building a page:
 *Menu entries must have ID "menu-header-$headername-$pagename"
 *Page must be named "$headername-$pagename"
 *Page has [content] and [sequence_$number] fields
-
-			<div id="tabs">
-				<ul>
-					<?php
-					for($i=1;;$i++){
-						if(x($page,'sequence_'+$i)){
-							echo '<li><a href="#sequence-' . $i . '">$i</a></li>';
-						}
-						else break;
-					}
-					?>
-				</ul>
-				<?php
-				if(x($page,'content')) echo $page['content'];
-				for($i=1;;$i++){
-					if(x($page,'sequence_'+$i)){
-						echo '<div id="sequence-' . $i . '">';
-						echo $page['sequence_' . $i];
-						echo '</div>';
-					}
-					else break;
-				}
-				?>
-			</div>
-
 -->
+
