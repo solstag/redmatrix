@@ -106,15 +106,15 @@ textarea {
 input {
 	padding: 5px;
 	line-height: 1.5;
-	border: 1px solid $input_border;
+	border: 1px solid #ccc;
 	-moz-border-radius: $radiuspx;
 	border-radius: $radiuspx;	
 }
 
 input[type="submit"] {
-	background-color: $input_bgsubmit;
+	background-color: #F0F0F0;
 	font-weight: bold;
-	color: $input_linksubmit;
+	color: #0080FF;
 	text-decoration: none;
 	padding: 6px 12px;
 }
@@ -346,6 +346,7 @@ footer {
 	-moz-border-radius: $radiuspx;
 	-webkit-border-radius: $radiuspx;
 	border-radius: $radiuspx;
+	word-wrap: break-word;
 }
 
 .vcard dl  {
@@ -493,10 +494,6 @@ footer {
 	font-size: 0.7em;
 }
 
-#colorbox {
-	padding: 5px;
-}
-
 .app-name {
 	overflow: none;
 }
@@ -524,8 +521,8 @@ footer {
 .pager-prev,
 .pager-next,
 .pager_n { 
-	border: 1px solid $editbuttons_bordercolour;
-	background: $editbuttons_bgcolour;
+	border: 1px solid #ccc;
+	background: transparent;
 	padding: 4px;
 }
 
@@ -788,7 +785,7 @@ a.rateme, div.rateme {
 	height: 20px;
 	margin: 15px;
 	padding: 0px 5px 0px 5px;
-	border-radius: 10px;
+	border-radius: $radiuspx;
 	border-color: $nav_bd;
 	background-color: $search_background;
     	transition: background-color 300ms ease 0s;
@@ -962,10 +959,20 @@ nav .acpopup {
 	background: none repeat scroll 0% 0% #FCF8E3 !important;
 }
 
+#cboxOverlay {
+	z-index: 1050;
+}
+
 #colorbox {
+	z-index: 1051;
+}
+
+#cboxContent {
+	padding: 3px;
 	border: 0px solid #fff;
+	border-radius: $radiuspx;
 	background-color: #fff;
-	z-index: 9;
+	z-index: 1052;
 }
 
 .settings-block {
@@ -1347,13 +1354,7 @@ header {
 }
 
 .notify-seen a {
-	background: $notifyseen_bgcolour;
-	color: $notifyseen_linkcolour !important;
-}
-
-.notify-seen a:hover {
-	background: $notifyseen_bghover;
-	color: $notifyseen_linkhover !important;
+	background: #ddd;
 }
 
 #page-spinner {
@@ -1363,10 +1364,6 @@ header {
 
 .tabs-end {
 	clear: both;
-}
-
-.modal-content {
-    background-color: $acl_bgcolour;
 }
 
 #acl-search {
@@ -1386,7 +1383,7 @@ header {
 
 #acl-list {
 	display: block;
-	border: 1px solid $acl_bordercolour;
+	border: 1px solid #ccc;
 	overflow: auto;
 	clear: both;
 	min-height: 62px;
@@ -1400,7 +1397,7 @@ header {
 .acl-list-item {
 	width: 48%; /* fallback if browser does not support calc() */
 	width: calc(50% - 10px);
-	border: 1px solid $acl_bordercolour;
+	border: 1px solid #ccc;
 	margin: 0px 0px 10px 10px;
 	padding: 5px;
 	float: left;
@@ -1436,11 +1433,6 @@ header {
 .acl-button-hide {
 	float: right;
 	margin-left: 5px;
-	$aclbutton_linkcolour
-}
-
-#acl-showall {
-	$aclbutton_linkcolour
 }
 
 .contact-block-content {
@@ -1841,7 +1833,7 @@ img.mail-list-sender-photo {
 }
 
 .abook-self {
-	background-color: $abookself_bgcolour;
+	background-color: #ffdddd;
 }
 
 .abook-pending-contact, .abook-permschange {
@@ -1875,21 +1867,6 @@ nav .dropdown-menu {
 	border-top-left-radius: 0px;
 	border-bottom-right-radius: $radiuspx;
 	border-bottom-left-radius: $radiuspx;
-	background-color: $notify_bgcolour;
-}
-
-nav .dropdown-menu .divider{
-	background-color: $navmenu_bgchover;
-}
-
-nav .dropdown-menu>li>a{
-	color: $notify_linkcolour;
-}
-
-nav .dropdown-menu>li>a:hover,nav .dropdown-menu>li>a:focus{
-	color: $notify_linkcolour;
-	background-color: $navmenu_bgchover;
-	$navmenu_bgimage
 }
 
 #usermenu-caret {
@@ -2168,22 +2145,7 @@ aside .nav > li > a:hover, aside .nav > li > a:focus {
 }
 
 .btn-default {
-    	background-color: $editbuttons_bgcolour;
-    	border-color: $editbuttons_bordercolour;
-	color: $editbuttons_colour;
-    	text-shadow: none;
-    	box-shadow: none;
-}
-
-.btn-default:hover, .btn-default:focus, .btn-default:active .btn-default.active {
-	background-color: $editbuttons_bghover;
-	border-color: $editbuttons_bordercolourhover;
-	color: $input_colourhover;
-	text-decoration: $input_decohover;
-}
-
-.btn-default.btn-sm:hover, .btn-default.btn-sm:focus, .btn-default.btn-sm:active .btn-default.btn-sm.active {
-    	text-decoration: none;
+	background-color: transparent;
 }
 
 @media screen and (max-width: 767px) {
@@ -2259,15 +2221,19 @@ aside .nav > li > a:hover, aside .nav > li > a:focus {
 }
 
 /* Modified original CSS to match input in Redbasic */
-.bootstrap-tagsinput {
+.jothidden .bootstrap-tagsinput {
 	border-color:#fff;
 	background-color: #fff;
 	box-shadow: none;
 	display: inline-block;
 	border-radius: $radiuspx;
 	cursor: text;
-	padding: 0 6px;
-	width: 70% !important;
+	padding: 0px 8px;
+	width: 100%;
+}
+
+.bootstrap-tagsinput .label {
+	font-size: 100%;
 }
 
 .jothidden .bootstrap-tagsinput:hover, .jothidden .bootstrap-tagsinput:focus {

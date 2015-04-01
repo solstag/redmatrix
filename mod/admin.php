@@ -73,7 +73,7 @@ function admin_post(&$a){
 }
 
 /**
- * @param App $$a
+ * @param App &$a
  * @return string
  */
 function admin_content(&$a) {
@@ -84,7 +84,7 @@ function admin_content(&$a) {
 		return login(false);
 	}
 
-	/**
+	/*
 	 * Side bar links
 	 */
 
@@ -125,7 +125,7 @@ function admin_content(&$a) {
 	));
 
 
-	/**
+	/*
 	 * Page content
 	 */
 	$o = '';
@@ -183,7 +183,7 @@ function admin_content(&$a) {
 /**
  * @brief Returns content for Admin Summary Page.
  *
- * @param App $$a
+ * @param App &$a
  * @return string HTML from parsed admin_summary.tpl
  */
 function admin_page_summary(&$a) {
@@ -252,8 +252,9 @@ function admin_page_summary(&$a) {
 
 
 /**
- * Admin Site Page
- *  @param App $a
+ * @brief POST handler for Admin Site Page.
+ *
+ * @param App &$a
  */
 function admin_page_site_post(&$a){
 	if (!x($_POST, 'page_site')){
@@ -277,15 +278,16 @@ function admin_page_site_post(&$a){
 
 	$register_text		=	((x($_POST,'register_text'))	? notags(trim($_POST['register_text']))		: '');
 
-	$allowed_sites		=	((x($_POST,'allowed_sites'))	? notags(trim($_POST['allowed_sites']))		: '');
-	$allowed_email		=	((x($_POST,'allowed_email'))	? notags(trim($_POST['allowed_email']))		: '');
-	$not_allowed_email		=	((x($_POST,'not_allowed_email'))	? notags(trim($_POST['not_allowed_email']))		: '');
-	$block_public		=	((x($_POST,'block_public'))		? True	:	False);
-	$force_publish		=	((x($_POST,'publish_all'))		? True	:	False);
-	$disable_discover_tab		=	((x($_POST,'disable_discover_tab'))		? True	:	False);
-	$no_login_on_homepage	=	((x($_POST,'no_login_on_homepage'))		? True	:	False);
-	$global_directory	= ((x($_POST,'directory_submit_url'))	? notags(trim($_POST['directory_submit_url']))	: '');
-	$no_community_page	= !((x($_POST,'no_community_page'))	? True	:	False);
+	$allowed_sites        = ((x($_POST,'allowed_sites'))	? notags(trim($_POST['allowed_sites']))		: '');
+	$allowed_email        = ((x($_POST,'allowed_email'))	? notags(trim($_POST['allowed_email']))		: '');
+	$not_allowed_email    = ((x($_POST,'not_allowed_email'))	? notags(trim($_POST['not_allowed_email']))		: '');
+	$block_public         = ((x($_POST,'block_public'))		? True	: False);
+	$force_publish        = ((x($_POST,'publish_all'))		? True	: False);
+	$disable_discover_tab = ((x($_POST,'disable_discover_tab'))		? True	:	False);
+	$no_login_on_homepage = ((x($_POST,'no_login_on_homepage'))		? True	:	False);
+	$global_directory     = ((x($_POST,'directory_submit_url'))	? notags(trim($_POST['directory_submit_url']))	: '');
+	$no_community_page    = !((x($_POST,'no_community_page'))	? True	:	False);
+	$default_expire_days  = ((array_key_exists('default_expire_days',$_POST)) ? intval($_POST['default_expire_days']) : 0);
 
 	$verifyssl         = ((x($_POST,'verifyssl'))        ? True : False);
 	$proxyuser         = ((x($_POST,'proxyuser'))        ? notags(trim($_POST['proxyuser']))  : '');
@@ -306,6 +308,7 @@ function admin_page_site_post(&$a){
 	set_config('system', 'sitename', $sitename);
 	set_config('system', 'no_login_on_homepage', $no_login_on_homepage);
 	set_config('system', 'verify_email', $verify_email);
+	set_config('system', 'default_expire_days', $default_expire_days);
 
 	if ($banner == '') {
 		del_config('system', 'banner');
@@ -358,6 +361,8 @@ function admin_page_site_post(&$a){
 }
 
 /**
+ * @brief Admin page site.
+ *
  * @param  App $a
  * @return string
  */
@@ -475,10 +480,11 @@ function admin_page_site(&$a) {
 		'$delivery_interval'			=> array('delivery_interval', t("Delivery interval"), (x(get_config('system','delivery_interval'))?get_config('system','delivery_interval'):2), t("Delay background delivery processes by this many seconds to reduce system load. Recommend: 4-5 for shared hosts, 2-3 for virtual private servers. 0-1 for large dedicated servers.")),
 		'$poll_interval'			=> array('poll_interval', t("Poll interval"), (x(get_config('system','poll_interval'))?get_config('system','poll_interval'):2), t("Delay background polling processes by this many seconds to reduce system load. If 0, use delivery interval.")),
 		'$maxloadavg'			=> array('maxloadavg', t("Maximum Load Average"), ((intval(get_config('system','maxloadavg')) > 0)?get_config('system','maxloadavg'):50), t("Maximum system load before delivery and poll processes are deferred - default 50.")),
+		'$default_expire_days' => array('default_expire_days', t('Expiration period in days for imported (matrix/network) content'), intval(get_config('system','default_expire_days')), t('0 for no expiration of imported content')),
 		'$form_security_token' => get_form_security_token("admin_site"),
 	));
-
 }
+
 function admin_page_hubloc_post(&$a){
 	check_form_security_token_redirectOnErr('/admin/hubloc', 'admin_hubloc');
 	require_once('include/zot.php');
@@ -614,7 +620,6 @@ function admin_page_queue($a) {
 		);
 	}
 
-
 	$r = q("select count(outq_posturl) as total, max(outq_priority) as priority, outq_posturl from outq 
 		where outq_delivered = 0 group by outq_posturl order by total desc");
 
@@ -622,7 +627,6 @@ function admin_page_queue($a) {
 		$r[$x]['eurl'] = urlencode($r[$x]['outq_posturl']);
 		$r[$x]['connected'] = datetime_convert('UTC',date_default_timezone_get(),$r[$x]['connected'],'Y-m-d');
 	}
-
 
 	$o = replace_macros(get_markup_template('admin_queue.tpl'), array(
 		'$banner' => t('Queue Statistics'),
@@ -760,12 +764,10 @@ function admin_page_users(&$a){
 	}
 
 
-//	WEe'll still need to link email addresses to admin/users/channels or some such, but this bit doesn't exist yet.
+//	We'll still need to link email addresses to admin/users/channels or some such, but this bit doesn't exist yet.
 //	That's where we need to be doing last post/channel flags/etc, not here.
 
-
 	$serviceclass = (($_REQUEST['class']) ? " and account_service_class = '" . dbesc($_REQUEST['class']) . "' " : '');
-
 
 	$order = " order by account_email asc ";
 	if($_REQUEST['order'] === 'expires')
@@ -799,7 +801,6 @@ function admin_page_users(&$a){
 //		return $e;
 //	}
 //	$users = array_map("_setup_users", $users);
-
 
 	$t = get_markup_template('admin_users.tpl');
 	$o = replace_macros($t, array(
@@ -838,9 +839,9 @@ function admin_page_users(&$a){
 
 
 /**
- * Channels admin page
+ * @brief Channels admin page.
  *
- * @param App $a
+ * @param App &$a
  */
 function admin_page_channels_post(&$a) {
 	$channels = ( x($_POST, 'channel') ? $_POST['channel'] : Array() );
@@ -869,7 +870,9 @@ function admin_page_channels_post(&$a) {
 }
 
 /**
- * @param App $a
+ * @brief
+ *
+ * @param App &$a
  * @return string
  */
 function admin_page_channels(&$a){
@@ -972,7 +975,7 @@ function admin_page_channels(&$a){
  */
 function admin_page_plugins(&$a){
 
-	/**
+	/*
 	 * Single plugin
 	 */
 	if ($a->argc == 3){
@@ -1052,7 +1055,7 @@ function admin_page_plugins(&$a){
 	}
 
 
-	/**
+	/*
 	 * List plugins
 	 */
 	$plugins = array();
@@ -1084,7 +1087,7 @@ function admin_page_plugins(&$a){
  * @param string $th
  * @param int $result
  */
-function toggle_theme(&$themes,$th,&$result) {
+function toggle_theme(&$themes, $th, &$result) {
 	for($x = 0; $x < count($themes); $x ++) {
 		if($themes[$x]['name'] === $th) {
 			if($themes[$x]['allowed']) {
@@ -1139,9 +1142,9 @@ function rebuild_theme_table($themes) {
 
 
 /**
- * Themes admin page
+ * @brief Themes admin page.
  *
- * @param App $a
+ * @param App &$a
  * @return string
  */
 function admin_page_themes(&$a){
@@ -1171,7 +1174,7 @@ function admin_page_themes(&$a){
 		return '';
 	}
 
-	/**
+	/*
 	 * Single theme
 	 */
 
@@ -1250,8 +1253,7 @@ function admin_page_themes(&$a){
 		));
 	}
 
-
-	/**
+	/*
 	 * List themes
 	 */
 
@@ -1278,9 +1280,9 @@ function admin_page_themes(&$a){
 
 
 /**
- * Logs admin page
+ * @brief POST handler for logs admin page.
  *
- * @param App $a
+ * @param App &$a
  */
 function admin_page_logs_post(&$a) {
 	if (x($_POST, 'page_logs')) {
@@ -1300,6 +1302,8 @@ function admin_page_logs_post(&$a) {
 }
 
 /**
+ * @brief Logs admin page.
+ *
  * @param App $a
  * @return string
  */
@@ -1432,5 +1436,4 @@ function admin_page_profs(&$a) {
 			'$submit' => t('Save')
 		));
 	}
-
 }

@@ -79,6 +79,14 @@ function comanche_parser(&$a, $s, $pass = 0) {
 		if($cnt)
 			$a->layout['theme'] = trim($matches[1]);
 
+		$cnt = preg_match_all("/\[webpage\](.*?)\[\/webpage\]/ism", $s, $matches, PREG_SET_ORDER);
+		if($cnt) {
+			// only the last webpage definition is used if there is more than one
+			foreach($matches as $mtch) {
+				$a->layout['webpage'] = comanche_webpage($a,$mtch[1]);
+			}
+		}
+
 	}
 	else {
 		$cnt = preg_match_all("/\[region=(.*?)\](.*?)\[\/region\]/ism", $s, $matches, PREG_SET_ORDER);
@@ -88,19 +96,12 @@ function comanche_parser(&$a, $s, $pass = 0) {
 			}
 		}
 
-		$cnt = preg_match_all("/\[webpage\](.*?)\[\/webpage\]/ism", $s, $matches, PREG_SET_ORDER);
-		if($cnt) {
-			// only the last webpage definition is used if there is more than one
-			foreach($matches as $mtch) {
-				$a->layout['webpage'] = comanche_webpage($a,$mtch[1]);
-			}
-		}
 	}
 
 }
 
 
-function comanche_menu($name,$class = '') {
+function comanche_menu($name, $class = '') {
 	$channel_id = comanche_get_channel_id();
 	if($channel_id) {
 		$m = menu_fetch($name,$channel_id, get_observer_hash());
@@ -110,20 +111,23 @@ function comanche_menu($name,$class = '') {
 
 function comanche_replace_region($match) {
 	$a = get_app();
-	if(array_key_exists($match[1], $a->page)) {
+	if (array_key_exists($match[1], $a->page)) {
 		return $a->page[$match[1]];
 	}
 }
 
 /**
- * @function comanche_get_channel_id()
- *    Returns the channel_id of the profile owner of the page, or the local_channel if there is no profile owner.
- * Otherwise returns 0
- */ 
-
+ * @brief Returns the channel_id of the profile owner of the page.
+ *
+ * Returns the channel_id of the profile owner of the page, or the local_channel
+ * if there is no profile owner. Otherwise returns 0.
+ *
+ * @return channel_id
+ */
 function comanche_get_channel_id() {
 	$channel_id = ((is_array(get_app()->profile)) ? get_app()->profile['profile_uid'] : 0);
-	if((! $channel_id) && (local_channel()))
+
+	if ((! $channel_id) && (local_channel()))
 		$channel_id = local_channel();
 
 	return $channel_id;
@@ -172,23 +176,26 @@ function comanche_webpage(&$a,$s) {
 }
 
 
-// Widgets will have to get any operational arguments from the session,
-// the global app environment, or config storage until we implement argument passing
-
-
+/**
+ * Widgets will have to get any operational arguments from the session, the
+ * global app environment, or config storage until we implement argument passing
+ *
+ * @param string $name
+ * @param string $text
+ */
 function comanche_widget($name, $text) {
 	$vars = array();
 	$matches = array();
 
 	$cnt = preg_match_all("/\[var=(.*?)\](.*?)\[\/var\]/ism", $text, $matches, PREG_SET_ORDER);
-	if($cnt) {
-		foreach($matches as $mtch) {
+	if ($cnt) {
+		foreach ($matches as $mtch) {
 			$vars[$mtch[1]] = $mtch[2];
 		}
 	}
 
 	$func = 'widget_' . trim($name);
-	if(function_exists($func))
+	if (function_exists($func))
 		return $func($vars);
 }
 
