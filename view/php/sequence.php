@@ -23,13 +23,13 @@
       $( selector ).tabs();
   };
   $(function() {
-    var activeheader = $("#accmenu-"+fullname.split('-',1)[0]).index()/2;
+    var activeitem="#accmenu-"+fullname;
+    var activeheader = $(activeitem).parent().prev().index()/2;
     if (activeheader < 0) activeheader = 0;
     $( "#accordion" ).accordion({
       active: activeheader,
       heightStyle: "content"
     });
-    var activeitem="#accmenu-"+fullname;
     $(activeitem).addClass("menu-item-active");
     $(activeitem+" a").click(function(e){e.preventDefault()});
     makeTabs( "#" + fullname + "-seqtabs" );
@@ -57,10 +57,8 @@
 
 <!--
 Building a page:
-*Menu headers must have ID "accmenu-$headername"
-*Menu entries must have ID "accmenu-$headername-$pagename"
-*Page must be named "$headername-$pagename"
-*Sequence tabs are blocks named "$headername-$pagename-seq-$tabname"
+*Menu entries must have ID "accmenu-$pagename"
+*Sequence tabs are blocks named "$pagename-seq-$tabname"
 *Tabs are ordered according to php comparison on $tabname strings
 *You must place a [widget=coursetabs][/widget] in your layout
 -->
