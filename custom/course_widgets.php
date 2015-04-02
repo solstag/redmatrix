@@ -15,7 +15,7 @@ function widget_coursetabs($arr){
 			intval($channel_id),
 			dbesc($name)
 		);
-	function n($x){ return end(explode('-',$x['sid']));}
+	function n($x){ return end(explode('-',$x));}
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
@@ -38,6 +38,7 @@ function widget_coursetabs($arr){
 }
 
 function widget_courserpost($arr){
+	$a = get_app();
 	$_SESSION['rpost'] = ["body"=>"Troque este texto pelo relato da sua experiência! Se preferir falar, anexe uma gravação de áudio sua, ou mesmo um vídeo.", "title"=>"Minha experiência no módulo", "remote_return"=>$a->get_baseurl() . $_SERVER[REQUEST_URI], "source"=>"Curso de Atenção Plena",];
 	require_once("mod/rpost.php");
 	$rpost_div = '<div id="rpost-data" style="display:none">' . rpost_content($a) . '</div>';
