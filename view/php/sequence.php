@@ -23,13 +23,15 @@
       $( selector ).tabs();
   };
   $(function() {
+    var activeheader = $("#accmenu-"+fullname.split('-',1)[0]).index()/2;
+    if (activeheader < 0) activeheader = 0;
     $( "#accordion" ).accordion({
-      active: $("#accmenu-"+fullname.split('-',1)[0]).index()/2,
+      active: activeheader,
       heightStyle: "content"
     });
-    var activeid="#accmenu-"+fullname;
-    $(activeid).addClass("menu-item-active");
-    $(activeid+" a").click(function(e){e.preventDefault()});
+    var activeitem="#accmenu-"+fullname;
+    $(activeitem).addClass("menu-item-active");
+    $(activeitem+" a").click(function(e){e.preventDefault()});
     makeTabs( "#" + fullname + "-seqtabs" );
     $( "#rpost-data" ).appendTo( $("#" + fullname + "-seq-rpost") ).show();
   });

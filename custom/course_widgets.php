@@ -11,11 +11,11 @@ function widget_coursetabs($arr){
 
 	$channel_id = comanche_get_channel_id();
 	$name= argv(2);
-	$r = q("select * from item inner join item_id on iid = item.id and item_id.uid = item.uid and item.uid = %d and service = 'BUILDBLOCK' and sid like '%s-seq-%%' limit 1",
+	$r = q("select * from item inner join item_id on iid = item.id and item_id.uid = item.uid and item.uid = %d and service = 'BUILDBLOCK' and sid like '%s-seq-%%'",
 			intval($channel_id),
 			dbesc($name)
 		);
-	function n($x){ return end(explode('-',$x));}
+	function n($x){ return end(explode('-',$x['sid']));}
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
@@ -24,8 +24,8 @@ function widget_coursetabs($arr){
 
 	$o.='<div id="' . $name . '-seqtabs"><ul>';
 	foreach($r as $rr){
-		$title = $rr['title'] ? $rr['title'] : n($rr['sid']) ;
-		$o .= '<li id="' . $rr['sid'] . '">' . $title . '</li>';		
+		$title = $rr['title'] ? $rr['title'] : n($rr) ;
+		$o .= '<li><a href="#' . $rr['sid'] . '">' . $title . '</a></li>';		
 	}
 	$o .= '</ul>';
 	foreach($r as $rr){
