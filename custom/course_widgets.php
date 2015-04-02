@@ -15,25 +15,25 @@ function widget_coursetabs($arr){
 			intval($channel_id),
 			dbesc($name)
 		);
-	function n($x){ return intval(end(explode('-',$x['sid'])));}
+	function n($x){ return end(explode('-',$x['sid']));}
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
 	}
 	uasort($r, 'cmp');
 
-	$o.='<div id="seqtabs"><ul>';
+	$o.='<div id="' . $name . '-seqtabs"><ul>';
 	foreach($r as $rr){
 		$title = $rr['title'] ? $rr['title'] : n($rr['sid']) ;
 		$o .= '<li id="' . $rr['sid'] . '">' . $title . '</li>';		
 	}
-	$o .= '</ul>'
+	$o .= '</ul>';
 	foreach($r as $rr){
-		o .= '<div id="' . $rr['sid'] . '">';
-		o .= prepare_text($rr['body'], $rr['mimetype']);
-		o .= '</div>';
+		$o .= '<div id="' . $rr['sid'] . '">';
+		$o .= prepare_text($rr['body'], $rr['mimetype']);
+		$o .= '</div>';
 	}
-	$o .= '</div>'
+	$o .= '</div>';
 	return $o;
 }
 

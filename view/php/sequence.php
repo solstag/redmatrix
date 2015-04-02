@@ -24,14 +24,14 @@
   };
   $(function() {
     $( "#accordion" ).accordion({
-      active: $("#menu-header-"+fullname.split('-',1)[0]).index()/2,
+      active: $("#accmenu-"+fullname.split('-',1)[0]).index()/2,
       heightStyle: "content"
     });
-    var activeid="#menu-header-"+fullname;
+    var activeid="#accmenu-"+fullname;
     $(activeid).addClass("menu-item-active");
     $(activeid+" a").click(function(e){e.preventDefault()});
-    makeTabs( "#seqtabs" );
-    $( "#rpost-data" ).appendTo( $("#seqtabs-rpost") ).show();
+    makeTabs( "#" + fullname + "-seqtabs" );
+    $( "#rpost-data" ).appendTo( $("#" + fullname + "-seq-rpost") ).show();
   });
   </script>
 </head>
@@ -55,9 +55,11 @@
 
 <!--
 Building a page:
-*Menu headers must have ID "menu-header-$headername"
-*Menu entries must have ID "menu-header-$headername-$pagename"
+*Menu headers must have ID "accmenu-$headername"
+*Menu entries must have ID "accmenu-$headername-$pagename"
 *Page must be named "$headername-$pagename"
-*Page has [content] and [sequence_$number] fields
+*Sequence tabs are blocks named "$headername-$pagename-seq-$tabname"
+*Tabs are ordered according to php comparison on $tabname strings
+*You must place a [widget=coursetabs][/widget] in your layout
 -->
 
