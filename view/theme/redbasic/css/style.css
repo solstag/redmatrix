@@ -623,16 +623,6 @@ footer {
 }
 
 
-.pmenu {
-	border-bottom: 1px solid #eec;
-	padding: 8px;
-	margin-top: 5px;
-	-moz-border-radius: $radiuspx;
-	-webkit-border-radius: $radiuspx;
-	border-radius: $radiuspx;
-
-}
-
 .pmenu.horizontal {
 	padding: 0 0 0 0;
 	border-bottom: none;
@@ -1112,8 +1102,6 @@ nav .acpopup {
 
 .required {
 	color: #ff0000;
-	font-size: 1.8rem;
-	margin-left: 5px;
 }
 
 
@@ -1521,13 +1509,17 @@ margin-right: 50px;
 }
 
 a .drop-icons {
-	color: $toolicon_colour;;
+	color: $toolicon_colour;
 	font-size: 1.2em;
 	text-decoration: none;
 }
  
 a .drop-icons:hover {
 	color: #FF0000;
+}
+
+.lockview {
+	cursor: pointer;
 }
 
 .permission-inherited {
@@ -1550,18 +1542,6 @@ a .drop-icons:hover {
 .attach-clip {
 	margin-right: 3px;
 	font-size: 1.8em;
-}
-
-.design-tools ul {
-	list-style-type: none;
-}
-
-.design-icons {
-	margin-right: 10px;
-}
-
-.design-icons:hover { 
-text-decoration: none; 
 }
 
 #menulist {
@@ -1608,11 +1588,14 @@ img.mail-list-sender-photo {
 	font-weight: bold;
 }
 
-.jothidden >input, .jothidden >input {
-	border: 1px solid #fff;
+.jothidden > input {
+	border: 1px solid $bgcolour;
+	background-color: $bgcolour;
 }
-.jothidden >input:hover, .jothidden >input:focus {
+.jothidden > input:hover,
+.jothidden > input:focus {
 	border: 1px solid #cccccc;
+	background-color: #fff;
 }
 
 #profile-jot-text {
@@ -1745,7 +1728,8 @@ img.mail-list-sender-photo {
 	font-size: 0.833em;
 }
 
-.wall-item-content {
+.wall-item-content,
+.page-body {
 	font-size: $font_size;
 	clear: both;
 }
@@ -1877,6 +1861,10 @@ nav .dropdown-menu {
 	color: $nav_active_icon_colour;
 }
 
+.page-title {
+	margin: 7px 0px;
+}
+
 .section-title-wrapper {
 	padding: 7px 10px;
 	background-color: $item_colour;
@@ -1945,6 +1933,12 @@ nav .dropdown-menu {
 
 [id^="cloud-index-"]:hover td,
 .cloud-index-active {
+	background-color: $item_colour;
+}
+
+[id^="webpage-list-item-"]:hover td,
+[id^="menu-list-item-"]:hover td,
+[id^="mitem-list-item-"]:hover td {
 	background-color: $item_colour;
 }
 
@@ -2211,6 +2205,12 @@ aside .nav > li > a:hover, aside .nav > li > a:focus {
 	border: 3px solid red !important;
 }
 
+.bb_rm-logo {
+	height: 1.3em;
+	width: auto;
+	margin-top:-3px;
+}
+
 .bootstrap-tagsinput .tag:before {
 	/* Copied from icon-asterisk, is there a better way to do it? */
 	font-family: FontAwesome;
@@ -2222,8 +2222,8 @@ aside .nav > li > a:hover, aside .nav > li > a:focus {
 
 /* Modified original CSS to match input in Redbasic */
 .jothidden .bootstrap-tagsinput {
-	border-color:#fff;
-	background-color: #fff;
+	border-color: $bgcolour;
+	background-color: $bgcolour;
 	box-shadow: none;
 	display: inline-block;
 	border-radius: $radiuspx;
@@ -2237,7 +2237,8 @@ aside .nav > li > a:hover, aside .nav > li > a:focus {
 }
 
 .jothidden .bootstrap-tagsinput:hover, .jothidden .bootstrap-tagsinput:focus {
-	border: 1px solid #cccccc;
+	border: 1px solid #ccc;
+	background-color: #fff;
 }
 
 /* Abusing theme-green is less work than makeing a new new one */

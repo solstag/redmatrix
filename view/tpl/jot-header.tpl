@@ -107,6 +107,7 @@ function enableOnUser(){
 		/* enable tinymce on focus and click */
 		$("#profile-jot-text").focus(enableOnUser);
 		$("#profile-jot-text").click(enableOnUser);
+
 		var upload_title = $('#wall-image-upload').attr('title');
 		var attach_title = $('#wall-file-upload').attr('title');
 		try {

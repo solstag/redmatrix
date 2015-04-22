@@ -19,13 +19,19 @@ code {
 	display:none;
 }
 
-#jot-title-wrap input {
+#jot-title-wrap input,
+#jot-pagetitle-wrap input {
 	padding: 8px;
 	margin-bottom: 5px;
 }
 
-#profile-jot-text {
+.profile-jot-text {
 	height: 39px;
+	padding: 8px;
+	width: 100%;
+}
+
+.jot-attachment {
 	padding: 8px;
 	width: 100%;
 }
@@ -88,10 +94,6 @@ code {
 
 .wall-item-wrapper {
 	margin-left:10px;
-}
-
-.lockview {
-	cursor: pointer;
 }
 
 .lockview-panel {

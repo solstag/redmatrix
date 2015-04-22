@@ -1171,7 +1171,7 @@ function status_editor($a, $x, $popup = false) {
 		'$action' =>  $a->get_baseurl(true) . '/item',
 		'$share' => (x($x,'button') ? $x['button'] : t('Share')),
 		'$webpage' => $webpage,
-		'$placeholdpagetitle' => ((x($x,'ptlabel')) ? $x['ptlabel'] : t('Page link title')),
+		'$placeholdpagetitle' => ((x($x,'ptlabel')) ? $x['ptlabel'] : t('Page link name')),
 		'$pagetitle' => (x($x,'pagetitle') ? $x['pagetitle'] : ''),
 		'$id_select' => $id_select,
 		'$id_seltext' => t('Post as'),
@@ -1208,6 +1208,7 @@ function status_editor($a, $x, $popup = false) {
 		'$shortpermset' => t('permissions'),
 		'$ptyp' => (($notes_cid) ? 'note' : 'wall'),
 		'$content' => ((x($x,'body')) ? htmlspecialchars($x['body'], ENT_COMPAT,'UTF-8') : ''),
+		'$attachment' => ((x($x, 'attachment')) ? $x['attachment'] : ''),
 		'$post_id' => '',
 		'$baseurl' => $a->get_baseurl(true),
 		'$defloc' => $x['default_location'],
@@ -1232,7 +1233,8 @@ function status_editor($a, $x, $popup = false) {
 		'$encrypt' => t('Encrypt text'),
 		'$cipher' => $cipher,
 		'$expiryModalOK' => t('OK'),
-		'$expiryModalCANCEL' => t('Cancel')
+		'$expiryModalCANCEL' => t('Cancel'),
+		'$expanded' => ((x($x, 'expanded')) ? $x['expanded'] : false),
 	));
 
 	if ($popup === true) {
@@ -1635,7 +1637,7 @@ function profile_tabs($a, $is_owner = false, $nickname = null){
 		);
 	}
 
-	if ($is_owner && feature_enabled($uid,'webpages')) {
+	if ($p['write_pages'] && feature_enabled($uid,'webpages')) {
 		$tabs[] = array(
 			'label' => t('Webpages'),
 			'url'   => $a->get_baseurl() . '/webpages/' . $nickname,

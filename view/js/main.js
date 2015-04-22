@@ -620,13 +620,14 @@ function collapseHeight() {
 		if(orgHeight > divmore_height + 10) {
 			if(! $(this).hasClass('divmore')) {
 				$(this).readmore({
+					speed: 0,
 					collapsedHeight: divmore_height, 
 					moreLink: '<a href="#" class="divgrow-showmore">' + aStr.divgrowmore + '</a>',
 					lessLink: '<a href="#" class="divgrow-showmore">' + aStr.divgrowless + '</a>',
 					beforeToggle: function(trigger, element, expanded) {
 						if(expanded) {
 							if((($(element).offset().top + divmore_height) - $(window).scrollTop()) < 65 ) {
-								$('html, body').animate( { scrollTop: $(window).scrollTop() - (orgHeight - divmore_height) }, {duration: 100 } );
+								$('html, body').animate( { scrollTop: $(window).scrollTop() - (orgHeight - divmore_height) }, {duration: 0 } );
 							}
 						}
 					}
@@ -817,6 +818,20 @@ function doprofilelike(ident, verb) {
 	$.get('like/' + ident + '?verb=' + verb, function() { window.location.href=window.location.href; });
 }
 
+
+function dropItem(url, object) {
+	var confirm = confirmDelete();
+	if(confirm) {
+		$('body').css('cursor', 'wait');
+		$(object).fadeTo('fast', 0.33, function () {
+			$.get(url).done(function() {
+				$(object).remove();
+				$('body').css('cursor', 'auto');
+			});
+		});
+	}
+}
+
 function dosubthread(ident) {
 	unpause();
 	$('#like-rotator-' + ident.toString()).spin('tiny');
@@ -869,8 +884,8 @@ function getPosition(e) {
 	return cursor;
 }
 
-function lockview(event, id) {
-	$.get('lockview/' + id, function(data) {
+function lockview(type, id) {
+	$.get('lockview/' + type + '/' + id, function(data) {
 		$('#panel-' + id).html(data);
 	});
 }

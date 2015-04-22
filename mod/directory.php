@@ -51,6 +51,10 @@ function directory_content(&$a) {
 	$observer = get_observer_hash();
 
 	$globaldir = get_globaldir_setting($observer);
+	// override your personal global search pref if we're doing a navbar search of the directory
+	if(intval($_REQUEST['navsearch']))
+		$globaldir = 1;
+
 	$safe_mode = get_safemode_setting($observer);
 
 	$pubforums = null;
@@ -78,12 +82,15 @@ function directory_content(&$a) {
 	$suggest = (local_channel() && x($_REQUEST,'suggest')) ? $_REQUEST['suggest'] : '';
 
 	if($suggest) {
+
 		$r = suggestion_query(local_channel(),get_observer_hash());
 
 		// Remember in which order the suggestions were
 		$addresses = array();
+		$common = array();
 		$index = 0;
 		foreach($r as $rr) {
+			$common[$rr['xchan_addr']] = $rr['total'];
 			$addresses[$rr['xchan_addr']] = $index++;
 		}
 
@@ -151,7 +158,11 @@ function directory_content(&$a) {
 		if(! is_null($pubforums))
 			$query .= '&pubforums=' . intval($pubforums);
 
-		$sort_order  = ((x($_REQUEST,'order')) ? $_REQUEST['order'] : 'date');
+		$directory_sort_order = get_config('system','directory_sort_order');
+		if(! $directory_sort_order)
+			$directory_sort_order = 'date';
+
+		$sort_order  = ((x($_REQUEST,'order')) ? $_REQUEST['order'] : $directory_sort_order);
 
 		if($sort_order)
 			$query .= '&order=' . urlencode($sort_order);
@@ -296,6 +307,8 @@ function directory_content(&$a) {
 							'keywords' => $out,
 							'ignlink' => $suggest ? $a->get_baseurl() . '/directory?ignore=' . $rr['hash'] : '',
 							'ignore_label' => "Don't suggest",
+							'common_friends' => (($common[$rr['address']]) ? intval($common[$rr['address']]) : ''),
+							'common_txt' => sprintf( t('Common connections: %s'), intval($common[$rr['address']]) ),
 							'safe' => $safe_mode
 						);
 

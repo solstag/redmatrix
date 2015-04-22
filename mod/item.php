@@ -22,7 +22,6 @@ require_once('include/attach.php');
 
 function item_post(&$a) {
 
-
 	// This will change. Figure out who the observer is and whether or not
 	// they have permission to post here. Else ignore the post.
 
@@ -116,7 +115,7 @@ function item_post(&$a) {
 	 * Check service class limits
 	 */
 	if ($uid && !(x($_REQUEST,'parent')) && !(x($_REQUEST,'post_id'))) {
-		$ret = item_check_service_class($uid,x($_REQUEST,'webpage'));
+		$ret = item_check_service_class($uid,(($_REQUEST['webpage'] == ITEM_WEBPAGE) ? true : false));
 		if (!$ret['success']) { 
 			notice( t($ret['message']) . EOL) ;
 			if(x($_REQUEST,'return')) 
@@ -399,6 +398,7 @@ function item_post(&$a) {
 		$verb              = notags(trim($_REQUEST['verb']));
 		$title             = escape_tags(trim($_REQUEST['title']));
 		$body              = trim($_REQUEST['body']);
+		$body              .= trim($_REQUEST['attachment']);
 		$postopts          = '';
 
 		$private = ( 
@@ -602,7 +602,7 @@ function item_post(&$a) {
 		if($results) {
 
 			// Set permissions based on tag replacements
-			set_linkified_perms($results, $str_contact_allow, $str_group_allow, $profile_uid, $parent_item);
+			set_linkified_perms($results, $str_contact_allow, $str_group_allow, $profile_uid, $parent_item, $private);
 
 			$post_tags = array();
 			foreach($results as $result) {
@@ -950,6 +950,10 @@ function item_content(&$a) {
 			if(local_channel() && local_channel() == $i[0]['uid'])
 				$local_delete = true;
 
+			$sys = get_sys_channel();
+			if(is_site_admin() && $sys['channel_id'] == $i[0]['uid'])
+				$can_delete = true;
+
 			$ob_hash = get_observer_hash();
 			if($ob_hash && ($ob_hash === $i[0]['author_xchan'] || $ob_hash === $i[0]['owner_xchan'] || $ob_hash === $i[0]['source_xchan']))
 				$can_delete = true;
@@ -1080,6 +1084,7 @@ function item_check_service_class($channel_id,$iswebpage) {
 	$ret = array('success' => false, $message => '');
 
 	if ($iswebpage) {
+		// note: we aren't counting comanche templates and blocks, only webpages
 		$r = q("select count(id) as total from item where parent = id 
 			and ( item_restrict & %d ) > 0 and ( item_restrict & %d ) = 0 and uid = %d ",
 			intval(ITEM_WEBPAGE),
@@ -1088,7 +1093,8 @@ function item_check_service_class($channel_id,$iswebpage) {
 		);
 	}
 	else {
-		$r = q("select count(id) as total from item where parent = id and item_restrict = 0 and uid = %d ",
+		$r = q("select count(id) as total from item where parent = id and item_restrict = 0 and (item_flags & %d) > 0 and uid = %d ",
+			intval(ITEM_WALL),
 			intval($channel_id)
 		);
 	}
@@ -1099,14 +1105,16 @@ function item_check_service_class($channel_id,$iswebpage) {
 	} 
 
 	if (!$iswebpage) {
+		$max = service_class_fetch($channel_id,'total_items');
 		if(! service_class_allows($channel_id,'total_items',$r[0]['total'])) {
-			$result['message'] .= upgrade_message() . sprintf( t('You have reached your limit of %1$.0f top level posts.'),$r[0]['total']);
+			$result['message'] .= upgrade_message() . sprintf( t('You have reached your limit of %1$.0f top level posts.'),$max);
 			return $result;
 		}
 	}
 	else {
+		$max = service_class_fetch($channel_id,'total_pages');
 		if(! service_class_allows($channel_id,'total_pages',$r[0]['total'])) {
-			$result['message'] .= upgrade_message() . sprintf( t('You have reached your limit of %1$.0f webpages.'),$r[0]['total']);
+			$result['message'] .= upgrade_message() . sprintf( t('You have reached your limit of %1$.0f webpages.'),$max);
 			return $result;
 		}	
 	}

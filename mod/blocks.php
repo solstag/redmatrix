@@ -33,6 +33,8 @@ function blocks_content(&$a) {
 
 	$which = argv(1);
 
+	$_SESSION['return_url'] = $a->query_string;
+
 	$uid = local_channel();
 	$owner = 0;
 	$channel = null;
@@ -76,16 +78,11 @@ function blocks_content(&$a) {
 		return;
 	}
 
+	$mimetype = (($_REQUEST['mimetype']) ? $_REQUEST['mimetype'] : get_pconfig($owner,'system','page_mimetype'));
 
-	if(feature_enabled($owner,'expert')) {
-		$mimetype = (($_REQUEST['mimetype']) ? $_REQUEST['mimetype'] : get_pconfig($owner,'system','page_mimetype'));
-		if(! $mimetype)
-			$mimetype = 'choose';	
+	if(! $mimetype) {
+		$mimetype = 'choose';
 	}
-	else {
-		$mimetype = 'text/bbcode';
-	}
-
 
 	$x = array(
 		'webpage' => ITEM_BUILDBLOCK,
@@ -98,6 +95,7 @@ function blocks_content(&$a) {
 		'mimetype' => $mimetype,
 		'ptlabel' => t('Block Name'),
 		'profile_uid' => intval($owner),
+		'expanded' => true,
 	);
 
 	if($_REQUEST['title'])
@@ -109,7 +107,7 @@ function blocks_content(&$a) {
 
 
 
-	$o .= status_editor($a,$x);
+	$editor = status_editor($a,$x);
 
 	$r = q("select * from item_id where uid = %d and service = 'BUILDBLOCK' order by sid asc",
 		intval($owner)
@@ -129,7 +127,10 @@ function blocks_content(&$a) {
 
 	$o .= replace_macros(get_markup_template('blocklist.tpl'), array(
 		'$baseurl' => $url,
+		'$title' => t('Blocks'),
+		'$create' => t('Create'),
 		'$edit' => t('Edit'),
+		'$editor' => $editor,
 		'$pages' => $pages,
 		'$channel' => $which,
 		'$view' => t('View'),
