@@ -1,1 +1,1 @@
-cd ; /opt/rh/php54/root/usr/bin/php include/poller.php
+cd $OPENSHIFT_REPO_DIR ; php include/poller.php
