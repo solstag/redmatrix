@@ -36,21 +36,50 @@ section {
 	background-color: #E6E6E6;
 }
 
+.menu-item-disabled {
+	background-color: #E6E6E6;
+	font-weight: lighter;
+}
+
+.menu-item-flag {
+	color: #D8FB50;
+	font-weight: bold;
+}
+
 div#seqtabs {
 	font-size: 20px;
 	line-height: 32px;
 }
 
 #region_2 .ui-widget-content {
-        background: #ffffff;
+	background: #ffffff;
 /*
-        font-size: 20px;
-        line-height: 32px;
+	font-size: 20px;
+	line-height: 32px;
 */
 }
 
 #region_2 .ui-widget-header {
-        background: #ffffff;
+	background: #ffffff;
 /*
-        font-size: 18px;
+	font-size: 18px;
+*/
+}
+
+.sequence-buttons {
+	text-align: center;
+	border: 1px solid;
+}
+
+.sequence-button {
+	border: 1px solid;
+}
+
+.sequence-button-previous {
+	border-radius: 50% 0 0 50% ;
+}
+
+.sequence-button-next {
+	border-radius: 0 50% 50% 0 ;
+}
 
