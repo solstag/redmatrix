@@ -23,7 +23,8 @@ function wall_attach_post(&$a) {
 
 	if($_FILES['userfile']['tmp_name']) {
 		$x = @getimagesize($_FILES['userfile']['tmp_name']);
-		if(($x) && ($x[2] === IMG_GIF || $x[2] === IMG_JPG || $x[2] === IMG_JPEG || $x[2] === IMG_PNG)) {
+		logger('getimagesize: ' . print_r($x,true), LOGGER_DATA); 
+		if(($x) && ($x[2] === IMAGETYPE_GIF || $x[2] === IMAGETYPE_JPEG || $x[2] === IMAGETYPE_PNG)) {
 			$args = array( 'source' => 'editor', 'visible' => 0, 'contact_allow' => array($channel['channel_hash']));
 			$ret = photo_upload($channel,$observer,$args);
 			if($ret['success']) {

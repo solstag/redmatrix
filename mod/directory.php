@@ -90,7 +90,7 @@ function directory_content(&$a) {
 		$common = array();
 		$index = 0;
 		foreach($r as $rr) {
-//			$common[$rr['xchan_addr']] = $rr['total'];
+			$common[$rr['xchan_addr']] = $rr['total'];
 			$addresses[$rr['xchan_addr']] = $index++;
 		}
 
@@ -158,7 +158,11 @@ function directory_content(&$a) {
 		if(! is_null($pubforums))
 			$query .= '&pubforums=' . intval($pubforums);
 
-		$sort_order  = ((x($_REQUEST,'order')) ? $_REQUEST['order'] : 'date');
+		$directory_sort_order = get_config('system','directory_sort_order');
+		if(! $directory_sort_order)
+			$directory_sort_order = 'date';
+
+		$sort_order  = ((x($_REQUEST,'order')) ? $_REQUEST['order'] : $directory_sort_order);
 
 		if($sort_order)
 			$query .= '&order=' . urlencode($sort_order);

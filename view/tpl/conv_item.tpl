@@ -21,7 +21,7 @@
 				{{/if}}
 				{{if $item.lock}}
 				<div class="wall-item-lock dropdown">
-					<i class="icon-lock lockview dropdown-toggle" data-toggle="dropdown" title="{{$item.lock}}" onclick="lockview(event,{{$item.id}});" ></i><ul id="panel-{{$item.id}}" class="lockview-panel dropdown-menu"></ul>&nbsp;
+					<i class="icon-lock lockview dropdown-toggle" data-toggle="dropdown" title="{{$item.lock}}" onclick="lockview('item',{{$item.id}});" ></i><ul id="panel-{{$item.id}}" class="lockview-panel dropdown-menu"></ul>&nbsp;
 				</div>
 				{{/if}}
 				<div class="wall-item-author">
@@ -117,13 +117,12 @@
 							{{if $item.star}}
 							<li role="presentation"><a role="menuitem" href="#" onclick="dostar({{$item.id}}); return false;"><i id="starred-{{$item.id}}" class="icon-star {{$item.star.isstarred}}" title="{{$item.star.toggle}}"></i> {{$item.star.toggle}}</a></li>
 							{{/if}}
+							{{if $item.drop.dropping}}
+							<li role="presentation"><a role="menuitem" href="#" onclick="dropItem('item/drop/{{$item.id}}', '#thread-wrapper-{{$item.id}}'); return false;" title="{{$item.drop.delete}}" ><i class="icon-trash"></i> {{$item.drop.delete}}</a></li>
+							{{/if}}
 							{{if $item.item_photo_menu}}
 							<li role="presentation" class="divider"></li>
 							{{$item.item_photo_menu}}
-							{{/if}}
-							{{if $item.drop.dropping}}
-							<li role="presentation" class="divider"></li>
-							<li role="presentation"><a role="menuitem" href="item/drop/{{$item.id}}" onclick="return confirmDelete();" title="{{$item.drop.delete}}" ><i class="icon-trash"></i> {{$item.drop.delete}}</a></li>
 							{{/if}}
 						</ul>
 					</div>

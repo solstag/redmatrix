@@ -98,12 +98,20 @@ function z_input_filter($channel_id,$s,$type = 'text/bbcode') {
 		return escape_tags($s);
 	if($type == 'text/plain')
 		return escape_tags($s);
+
+	$a = get_app();
+	if($a->is_sys) {
+		return $s;
+	}
+
 	$r = q("select account_id, account_roles, channel_pageflags from account left join channel on channel_account_id = account_id where channel_id = %d limit 1",
 		intval($channel_id)
 	);
-	if($r && (($r[0]['account_roles'] & ACCOUNT_ROLE_ALLOWCODE) || ($r[0]['channel_pageflags'] & PAGE_ALLOWCODE))) {
-		if(local_channel() && (get_account_id() == $r[0]['account_id'])) {
-			return $s;
+	if($r) {
+		if(($r[0]['account_roles'] & ACCOUNT_ROLE_ALLOWCODE) || ($r[0]['channel_pageflags'] & PAGE_ALLOWCODE)) {
+			if(local_channel() && (get_account_id() == $r[0]['account_id'])) {
+				return $s;
+			}
 		}
 	}
 
@@ -1034,9 +1042,9 @@ function list_smilies() {
 		'<img class="smiley" src="' . $a->get_baseurl() . '/images/smiley-facepalm.gif" alt=":facepalm" />',
 		'<img class="smiley" src="' . $a->get_baseurl() . '/images/like.gif" alt=":like" />',
 		'<img class="smiley" src="' . $a->get_baseurl() . '/images/dislike.gif" alt=":dislike" />',
-		'<a href="http://getzot.com"><strong>red<img class="smiley" src="' . $a->get_baseurl() . '/images/rm-16.png" alt="' . urlencode('red#matrix') . '" />matrix</strong></a>',
-		'<a href="http://getzot.com"><strong>red<img class="smiley" src="' . $a->get_baseurl() . '/images/rm-16.png" alt="' . urlencode('red#') . '" />matrix</strong></a>',
-		'<a href="http://getzot.com"><strong>red<img class="smiley" src="' . $a->get_baseurl() . '/images/rm-16.png" alt="r#" />matrix</strong></a>'
+		'<a href="http://getzot.com"><strong>red<img class="smiley bb_rm-logo" src="' . $a->get_baseurl() . '/images/rm-32.png" alt="' . urlencode('red#matrix') . '" />matrix</strong></a>',
+		'<a href="http://getzot.com"><strong>red<img class="smiley bb_rm-logo" src="' . $a->get_baseurl() . '/images/rm-32.png" alt="' . urlencode('red#') . '" />matrix</strong></a>',
+		'<a href="http://getzot.com"><strong>red<img class="smiley bb_rm-logo" src="' . $a->get_baseurl() . '/images/rm-32.png" alt="r#" />matrix</strong></a>'
 
 	);
 
@@ -1179,6 +1187,17 @@ function unobscure(&$item) {
 			$item['body'] = crypto_unencapsulate(json_decode_plus($item['body']),$key);
 	}
 }
+
+function unobscure_mail(&$item) {
+	if(array_key_exists('mail_flags',$item) && ($item['mail_flags'] & MAIL_OBSCURED)) {
+		$key = get_config('system','prvkey');
+		if($item['title'])
+			$item['title'] = crypto_unencapsulate(json_decode_plus($item['title']),$key);
+		if($item['body'])
+			$item['body'] = crypto_unencapsulate(json_decode_plus($item['body']),$key);
+	}
+}
+
 
 function theme_attachments(&$item) {
 
@@ -1587,17 +1606,19 @@ function layout_select($channel_id, $current = '') {
 		intval($channel_id),
 		intval(ITEM_PDL)
 	);
+
 	if($r) {
-		$o = t('Select a page layout: ');
-		$o .= '<select name="layout_mid" id="select-layout_mid" >';
-		$empty_selected = (($current === '') ? ' selected="selected" ' : '');
-		$o .= '<option value="" ' . $empty_selected . '>' . t('default') . '</option>';
+		$empty_selected = (($current === false) ? ' selected="selected" ' : '');
+		$options .= '<option value="" ' . $empty_selected . '>' . t('default') . '</option>';
 		foreach($r as $rr) {
 			$selected = (($rr['mid'] == $current) ? ' selected="selected" ' : '');
-			$o .= '<option value="' . $rr['mid'] . '"' . $selected . '>' . $rr['sid'] . '</option>';
+			$options .= '<option value="' . $rr['mid'] . '"' . $selected . '>' . $rr['sid'] . '</option>';
 		}
-		$o .= '</select>';
 	}
+
+	$o = replace_macros(get_markup_template('field_select_raw.tpl'), array(
+		'$field'	=> array('layout_mid', t('Page layout'), $selected, t('You can create your own with the layouts tool'), $options)
+	));
 
 	return $o;
 }
@@ -1612,25 +1633,33 @@ function mimetype_select($channel_id, $current = 'text/bbcode') {
 		'text/plain'
 	);
 
-	$r = q("select account_id, account_roles, channel_pageflags from account left join channel on account_id = channel_account_id where
-		channel_id = %d limit 1",
-		intval($channel_id)
-	);
+	$a = get_app();
+	if($a->is_sys) {
+		$x[] = 'application/x-php';
+	}
+	else {
+		$r = q("select account_id, account_roles, channel_pageflags from account left join channel on account_id = channel_account_id where
+			channel_id = %d limit 1",
+			intval($channel_id)
+		);
 
-	if($r) {
-		if(($r[0]['account_roles'] & ACCOUNT_ROLE_ALLOWCODE) || ($r[0]['channel_pageflags'] & PAGE_ALLOWCODE)) {
-			if(local_channel() && get_account_id() == $r[0]['account_id'])
-				$x[] = 'application/x-php';
-		}
+		if($r) {
+			if(($r[0]['account_roles'] & ACCOUNT_ROLE_ALLOWCODE) || ($r[0]['channel_pageflags'] & PAGE_ALLOWCODE)) { 
+				if(local_channel() && get_account_id() == $r[0]['account_id']) {
+					$x[] = 'application/x-php';
+				}
+			}
+		}		
 	}
 
-	$o = t('Page content type: ');
-	$o .= '<select name="mimetype" id="mimetype-select">';
 	foreach($x as $y) {
-		$select = (($y == $current)	? ' selected="selected" ' : '');
-		$o .= '<option name="' . $y . '"' . $select . '>' . $y . '</option>';
+		$selected = (($y == $current) ? ' selected="selected" ' : '');
+		$options .= '<option name="' . $y . '"' . $selected . '>' . $y . '</option>';
 	}
-	$o .= '</select>';
+
+	$o = replace_macros(get_markup_template('field_select_raw.tpl'), array(
+		'$field'	=> array('mimetype', t('Page content type'), $selected, '', $options)
+	));
 
 	return $o;
 }
@@ -2090,7 +2119,7 @@ function design_tools() {
 	$who = $channel['channel_address'];
 
 	return replace_macros(get_markup_template('design_tools.tpl'), array(
-		'$title' => t('Design'),
+		'$title' => t('Design Tools'),
 		'$who' => $who,
 		'$sys' => $sys,
 		'$blocks' => t('Blocks'),
