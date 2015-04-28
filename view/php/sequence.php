@@ -16,16 +16,16 @@ Building a page:
   <script>
   var baseurl="<?php echo $a->get_baseurl() ?>";
   var pagename="<?php echo argv(2) ?>";
-  var flagname="<?php echo local_channel() ? get_pconfig(local_channel(),'system','startpage') : ''; ?>";
-  var flagseq='';
-  flagname = end(explode('/',flagname));
-  list(flagname,flagseq) = explode('#',flagname);
+  var startpage="<?php echo local_channel() ? get_pconfig(local_channel(),'system','startpage') : ''; ?>";
+  startpage = startpage.split("/").pop().split("#");
+  var flagname = startpage[0];
+  var flagseq = startpage.length>1 ? startpage[1] : '';
   var makeTabs = function(selector) {
-      var numtabs = $( selector ).find( " ul a" ).length;
-      var seqlastenabled = $( selector ).find("ul a[href="+flagname+"]").parent().index();
+      var numtabs = $( selector ).find( "> ul a" ).length;
+      var seqlastenabled = $( selector ).find("> ul a[href='"+flagname+"']").parent().index();
 
       $( selector ) // change hrefs to full URL as "base href" is set
-          .find( "ul a" ).each( function() {
+          .find( "> ul a" ).each( function() {
               var href = $( this ).attr( "href" ),
                   newHref = window.location.protocol + '//' + window.location.hostname +
                       window.location.pathname + href;
@@ -35,35 +35,39 @@ Building a page:
               }
           })
 
-      if (seqlastenabled < 0) seqlastenabled = 0;
-      var seqdisabled = [];
-      for(var i=seqlastenabled+1; i<numtabs; i++){ seqenabled.push(i); }
-
-      $( selector ).tabs({show: true, disabled: seqdisabled});
-
-      $( "#rpost-data" ).appendTo( $("#" + pagename + "-seq-rpost") ).show();
-
       var updateSeqButtons = function(index) {
-		  if(index==0)
+		  if(index==0 || index===false)
 		      $(".sequence-button-previous").attr("disabled","disabled");
 		  else
 		      $(".sequence-button-previous").removeAttr("disabled");
-		  if(index==numtabs)
+		  if(index==numtabs-1 || index===false)
 		      $(".sequence-button-next").attr("disabled","disabled");
 		  else
 		      $(".sequence-button-next").removeAttr("disabled");
       }
+
+      if (seqlastenabled < 0) seqlastenabled = 0;
+      var seqdisabled = [];
+      for(var i=seqlastenabled+1; i<numtabs; i++){ seqdisabled.push(i); }
+
+      $( selector ).tabs({
+          show: true,
+          disabled: seqdisabled,
+          create: function( e, ui ) { updateSeqButtons(ui.tab.index()); },
+          beforeActivate: function( e, ui ) { updateSeqButtons(ui.newTab.index()); }
+      });
+
       $( ".sequence-button-previous" ).click(function() {
           var newindex = $( selector ).tabs( "option", "active") - 1 ;
           $( selector ).tabs( "option", "active", newindex );
-          updateSeqButtons(newindex);
       });
       $( ".sequence-button-next" ).click(function() {
           var newindex = $( selector ).tabs( "option", "active") + 1 ;
           $( selector ).tabs( "enable", newindex );
           $( selector ).tabs( "option", "active", newindex );
-          updateSeqButtons(newindex);
       });
+      var activeindex=$( selector ).tabs( "option", "active");
+      for(var i=activeindex; i>0; i--){ $( selector ).tabs("enable", i ); }
   };
   var makeMenu = function(activeitem, flagitem) {
       var activeheader = $(activeitem).parent().prev().index()/2;
@@ -77,6 +81,7 @@ Building a page:
       $(activeitem+" a").click(function(e){e.preventDefault()});
   };
   $(function() {
+      $( "#rpost-data" ).appendTo( $("#" + pagename + "-seq-rpost") ).show();
       makeMenu( "#accmenu-" + pagename, "#accmenu-" + flagname );
       makeTabs( "#" + pagename + "-seqtabs" );
   });
@@ -99,4 +104,12 @@ Building a page:
 	<footer><?php if(x($page,'footer')) echo $page['footer']; ?></footer>
 </body>
 </html>
+
+<!--
+JSON.parse()
+JSON.stringify()
+mod/courses.php
+pconfig(local_user(),'courses',description)
+description = {'some_module':'some_tab','another_module':'another_tab'}
+-->
 

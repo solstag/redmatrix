@@ -68,18 +68,23 @@ div#seqtabs {
 
 .sequence-buttons {
 	text-align: center;
-	border: 1px solid;
+	margin-top: 1em;
+	margin-bottom: 1em;
 }
 
 .sequence-button {
-	border: 1px solid;
+	border: 1px solid #FBD850;
+}
+
+.sequence-button[disabled="disabled"] {
+	opacity: 0.5;
 }
 
 .sequence-button-previous {
-	border-radius: 50% 0 0 50% ;
+	border-radius: 15px 0 0 15px ;
 }
 
 .sequence-button-next {
-	border-radius: 0 50% 50% 0 ;
+	border-radius: 0 15px 15px 0 ;
 }
 

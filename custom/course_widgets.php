@@ -35,10 +35,10 @@ function widget_coursetabs($arr){
 		$o .= prepare_text($rr['body'], $rr['mimetype']);
 		$o .= '</div>';
 	}
-	$o .= '<div class="sequence-buttons">'
-	$o .= '<button class="sequence-button sequence-button-previous" disabled="disabled">Voltar</button>'
-	$o .= '<button class="sequence-button sequence-button-next">Seguir</button>'
-	$o .= '</div>'
+	$o .= '<div class="sequence-buttons">';
+	$o .= '<button class="sequence-button sequence-button-previous" disabled="disabled">Voltar</button>';
+	$o .= '<button class="sequence-button sequence-button-next">Seguir</button>';
+	$o .= '</div>';
 
 /*	$k = array_keys($r);
 	for($i=0; $i < count($k); $i++){
