@@ -64,7 +64,7 @@ function widget_coursetabs($arr){
 
 function widget_courserpost($arr){
 	$a = get_app();
-	$_SESSION['rpost'] = ["body"=>"Troque este texto pelo relato da sua experiência! Se preferir falar, anexe uma gravação de áudio sua, ou mesmo um vídeo.", "title"=>"Minha experiência no módulo " . $arr['name'], "remote_return"=>$a->get_baseurl() . $_SERVER[REQUEST_URI] . '#' . $arr['name'] . '-seq-z', "source"=>"Curso de Atenção Plena",];
+	$_SESSION['rpost'] = ["body"=>"Troque este texto pelo relato da sua experiência! Se preferir falar, clique no clip abaixo para anexar uma gravação de áudio ou vídeo a esta mensagem.", "title"=>"Minha experiência no módulo " . $arr['name'], "remote_return"=>$a->get_baseurl() . $_SERVER[REQUEST_URI] . '#' . $arr['name'] . '-seq-z', "source"=>"Curso de Atenção Plena",];
 	require_once("mod/rpost.php");
 	$rpost_div = '<div id="rpost-data" style="display:none">' . rpost_content($a) . '</div>';
 	return $rpost_div;

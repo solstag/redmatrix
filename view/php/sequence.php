@@ -15,6 +15,7 @@ Building a page:
   <script src="//atencao-plena.rhcloud.com/custom/jquery-ui-1.11.4/jquery-ui.js"></script>
   <script>
   var baseurl="<?php echo $a->get_baseurl() ?>";
+  var channelname="<?php echo argv(1) ?>";
   var pagename="<?php echo argv(2) ?>";
   var startpage="<?php echo local_channel() ? get_pconfig(local_channel(),'system','startpage') : ''; ?>";
   startpage = startpage.split("/").pop().split("#");
@@ -70,19 +71,20 @@ Building a page:
       for(var i=activeindex; i>0; i--){ $( selector ).tabs("enable", i ); }
   };
   var makeMenu = function(activeitem, flagitem) {
-      var activeheader = $(activeitem).parent().prev().index()/2;
+      var activeheader = $(activeitem).parent().parent().prev().index()/2;
       if (activeheader < 0) activeheader = 0;
       $( "#accordion" ).accordion({
           active: activeheader,
           heightStyle: "content"
       });
-      $(activeitem).addClass("menu-item-active");
-      $(flagitem).addClass("menu-item-flag");
-      $(activeitem+" a").click(function(e){e.preventDefault()});
+      $(activeitem).parent().addClass("menu-item-active");
+      $(activeitem).click(function(e){e.preventDefault()});
+      $(flagitem).parent().addClass("menu-item-flag");
   };
   $(function() {
       $( "#rpost-data" ).appendTo( $("#" + pagename + "-seq-rpost") ).show();
-      makeMenu( "#accmenu-" + pagename, "#accmenu-" + flagname );
+      makeMenu( "#accordion [href='page/"+channelname+"/"+pagename+"']",
+                "#accordion [href='page/"+channelname+"/"+flagname+"']" );
       makeTabs( "#" + pagename + "-seqtabs" );
   });
   </script>

@@ -32,6 +32,10 @@ section {
 	padding: 65px 7px 200px 7px;
 }
 
+#rpost-data > div.section-title-wrapper {
+	display: none;
+}
+
 .menu-item-active {
 	background-color: #E6E6E6;
 }
