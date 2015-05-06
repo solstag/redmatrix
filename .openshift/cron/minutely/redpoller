@@ -1,1 +1,0 @@
-cd $OPENSHIFT_REPO_DIR ; php include/poller.php
