@@ -86,6 +86,7 @@ Building a page:
       makeMenu( "#accordion [href='page/"+channelname+"/"+pagename+"']",
                 "#accordion [href='page/"+channelname+"/"+flagname+"']" );
       makeTabs( "#" + pagename + "-seqtabs" );
+   $('#region_2 video, #region_2 audio').bind('contextmenu',function() { return false; });
   });
   </script>
 </head>
