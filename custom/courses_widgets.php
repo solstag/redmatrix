@@ -17,7 +17,7 @@ function courses_has_visited($pagepath, $tag, $xchan = NULL) {
 }
 
 function courses_menu_attr($pagepath) {
-	$o= ''; $o += ' ';
+	$o= ''; $o .= ' ';
 	if((!strpos($pagepath,':') === false) or substr_count($pagepath,'/') != 2) return '';
 
 	list($module,$member,$page) = explode('/',$pagepath);
@@ -31,11 +31,14 @@ function courses_menu_attr($pagepath) {
 			intval($channel_id),
 			dbesc($page)
 		);
+	if(!function_exists("n"){
 	function n($x){ return end(explode('-',$x['sid']));}
+	}
+	if(!function_exists("cmp"){
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
-	}
+	}}
 	uasort($r, 'cmp');
 
 	$data= [];
@@ -50,8 +53,8 @@ function courses_menu_attr($pagepath) {
 			break;
 		}
 	}
-	$o += ' data="'.implode(' ',$data).'"';
-	$o += ' class="' . (count($r) == count($data) ? 'menu-item-complete' : 'menu-item-incomplete') . '"';
+	$o .= ' data="'.implode(' ',$data).'"';
+	$o .= ' class="' . (count($r) == count($data) ? 'menu-item-complete' : 'menu-item-incomplete') . '"';
 
 	return $o;
 }
@@ -64,7 +67,9 @@ function widget_coursetabs($arr){
 	$o= '';
 
 	$name= argv(2);
+	if(!function_exists("n"){
 	function n($x){ return end(explode('-',$x['sid']));}
+	}
 
 	$o .= widget_courserpost(['name'=>$name,]);
 
@@ -73,10 +78,11 @@ function widget_coursetabs($arr){
 			intval($channel_id),
 			dbesc($name)
 		);
+	if(!function_exists("cmp"){
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
-	}
+	}}
 	uasort($r, 'cmp');
 
 	$o.='<div id="' . $name . '-seqtabs"><ul>';
@@ -128,18 +134,18 @@ function widget_courserpost($arr){
 function widget_coursemenu($arr){
 	$o= '';
 
-	$o += '<div id="accordion">';
+	$o .= '<div id="accordion">';
 
 	$deep = false;
 	foreach($arr as $key => $value){
 		$type = explode('_', $key);
-		if ($type[0] == 'header' and $type[1] == 'title') { if($deep) $o += '</div>'; $o += '<h3>'.$value.'</h3><div>'; $deep=true;}
-		if ($type[0] == 'item' and $type[1] == 'href') $o += '<p><a href="'.$value.'" '.courses_menu_attr($value).'>';
-		if ($type[0] == 'item' and $type[1] == 'title') $o += $value.'</a></p>';
+		if ($type[0] == 'header' and $type[1] == 'title') { if($deep) $o .= '</div>'; $o .= '<h3>'.$value.'</h3><div>'; $deep=true;}
+		if ($type[0] == 'item' and $type[1] == 'href') $o .= '<p><a href="'.$value.'" '.courses_menu_attr($value).'>';
+		if ($type[0] == 'item' and $type[1] == 'title') $o .= $value.'</a></p>';
 	}
-	$o += '</div>';
+	$o .= '</div>';
 	$deep = false;
-	$o += '</div>';
+	$o .= '</div>';
 
 	return $o;
 }

@@ -25,11 +25,11 @@ function courses_uninstall() {
 }
 
 function courses_load() {
-	register_hook('init_0','addon/courses/courses.php','courses_loader');
+//	register_hook('init_0','addon/courses/courses.php','courses_loader');
 }
 
 function courses_unload() {
-	unregister_hook('init_0','addon/courses/courses.php','courses_loader');
+//	unregister_hook('init_0','addon/courses/courses.php','courses_loader');
 }
 
 function courses_loader() {};
