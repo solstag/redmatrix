@@ -1,35 +1,23 @@
-<!--
-Building a page:
-*Menu entries must have ID "accmenu-$pagename"
-*Sequence tabs are blocks named "$pagename-seq-$tabname"
-*Tabs are ordered according to php comparison on $tabname strings
-*You must place a [widget=coursetabs][/widget] in your layout
--->
-
 <!DOCTYPE html >
 <html>
 <head>
   <title><?php if(x($page,'title')) echo $page['title'] ?></title>
   <?php if(x($a->page,'htmlhead')) echo $a->page['htmlhead'] ?>
-  <link rel="stylesheet" href="//atencao-plena.rhcloud.com/custom/jquery-ui-1.11.4/jquery-ui.css">
-  <script src="//atencao-plena.rhcloud.com/custom/jquery-ui-1.11.4/jquery-ui.js"></script>
+  <link rel="stylesheet" href="'.$a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.css">
+  <script src="'.$a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.js"></script>
   <script>
   var baseurl="<?php echo $a->get_baseurl() ?>";
   var channelname="<?php echo argv(1) ?>";
   var pagename="<?php echo argv(2) ?>";
-  var startpage="<?php echo local_channel() ? get_pconfig(local_channel(),'system','startpage') : ''; ?>";
-  startpage = startpage.split("/").pop().split("#");
-  var flagname = startpage[0];
-  var flagseq = startpage.length>1 ? startpage[1] : '';
   var makeTabs = function(selector) {
       var numtabs = $( selector ).find( "> ul a" ).length;
-      var seqlastenabled = $( selector ).find("> ul a[href='"+flagname+"']").parent().index();
+      var seqlastenabled = $( "#accordion [href='page/"+channelname+"/"+pagename+"']" ).attr("data").split(" ").length-1;
 
       $( selector ) // change hrefs to full URL as "base href" is set
           .find( "> ul a" ).each( function() {
               var href = $( this ).attr( "href" ),
                   newHref = window.location.protocol + '//' + window.location.hostname +
-                      window.location.pathname + href;
+                      window.location.pathname + window.location.search + href;
 
               if ( href.indexOf( "#" ) == 0 ) {
                   $( this ).attr( "href", newHref );
@@ -54,6 +42,7 @@ Building a page:
       $( selector ).tabs({
           show: true,
           disabled: seqdisabled,
+          active: seqlastenabled,
           create: function( e, ui ) { updateSeqButtons(ui.tab.index()); },
           beforeActivate: function( e, ui ) { updateSeqButtons(ui.newTab.index()); }
       });
@@ -70,7 +59,7 @@ Building a page:
       var activeindex=$( selector ).tabs( "option", "active");
       for(var i=activeindex; i>0; i--){ $( selector ).tabs("enable", i ); }
   };
-  var makeMenu = function(activeitem, flagitem) {
+  var makeMenu = function(activeitem) {
       var activeheader = $(activeitem).parent().parent().prev().index()/2;
       if (activeheader < 0) activeheader = 0;
       $( "#accordion" ).accordion({
@@ -79,12 +68,10 @@ Building a page:
       });
       $(activeitem).parent().addClass("menu-item-active");
       $(activeitem).click(function(e){e.preventDefault()});
-      $(flagitem).parent().addClass("menu-item-flag");
   };
   $(function() {
       $( "#rpost-data" ).appendTo( $("#" + pagename + "-seq-rpost") ).show();
-      makeMenu( "#accordion [href='page/"+channelname+"/"+pagename+"']",
-                "#accordion [href='page/"+channelname+"/"+flagname+"']" );
+      makeMenu( "#accordion [href='page/"+channelname+"/"+pagename+"']");
       makeTabs( "#" + pagename + "-seqtabs" );
    $('#region_2 video, #region_2 audio').bind('contextmenu',function() { return false; });
   });

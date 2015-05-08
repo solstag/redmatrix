@@ -21,7 +21,7 @@ Thumbs.db
 .htconfig.php
 favicon.*
 addon/
-custom/
+#custom/
 /store/
 # site apps
 apps/

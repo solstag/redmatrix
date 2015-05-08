@@ -7,49 +7,118 @@
  * ToDo: most of it
  */
 
+/*
+Building a course:
+*In the webpages module, create a new layout using the "sequence" template
+*Place [widget=coursetabs]...[/widget] and [widget=coursetabs][/widget] in your layout
+*Build the menu by passing a sequence of variables to the widget: header_title_$id and item_{href,title}_$id
+*Menu will be ordered like the variables passed
+*Sequence tabs are webpage blocks named "$pagename-seq-$tabname"
+*Tabs are ordered according to php string comparison on $tabname
+*/
+
+function courses_install(){
+  $r=q("CREATE TABLE IF NOT EXISTS `coursevisits` (
+		  `coursevisits_id`    int(10) unsigned NOT NULL AUTO_INCREMENT,
+		  `coursevisits_xchan` char(255)        NOT NULL DEFAULT '',
+		  `coursevisits_time`  datetime         NOT NULL DEFAULT '0000-00-00 00:00:00',
+		  `coursevisits_pagepath`  char(255)    NOT NULL DEFAULT '',
+		  `coursevisits_tag`   char(255)        NOT NULL DEFAULT '',
+		  PRIMARY KEY (`coursevisits_id`),
+		  UNIQUE (coursevisits_xchan,coursevisits_pagepath,coursevisits_tag)
+	  ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;");
+}
+
 
 function courses_load() {
-//  register_hook('jot_tool', 'addon/mascara/mascara.php', 'courses_jot_tool');
+//  register_hook('hook_name', 'addon/mascara/courses.php', 'courses_hook_name');
 }
 
 function courses_unload() {
-//  unregister_hook('jot_tool', 'addon/mascara/mascara.php', 'courses_jot_tool');
+//  unregister_hook('hook_name', 'addon/mascara/courses.php', 'courses_hook_name');
 }
 
-function courses_jot_tool(&$a, &$b) {
-  if (! ($a->profile_uid and $a->profile_uid == local_channel() ) )
-    return;
-  if (! ($a->account['account_service_class'] === 'ppsus') )
-    return;
-  /**
-   * load css
-   */ 
-  $a->page['htmlhead'] .= '<link rel="stylesheet" href="'.$a->get_baseurl().'/addon/mascara/mascara.css" type="text/css" media="screen" />' . "\r\n";
-  /**
-   * load js
-   */ 
-  $a->page['htmlhead'] .= '<script src="'.$a->get_baseurl().'/addon/mascara/mascara.js"></script>' . "\r\n";
-
-  /**
-   * load chosen
-   */
-  $a->page['htmlhead'] .= '<script src="'.$a->get_baseurl().'/addon/mascara/chosen/chosen.jquery.min.js"></script>' . "\r\n";
-  $a->page['htmlhead'] .= '<link rel="stylesheet" href="'.$a->get_baseurl().'/addon/mascara/chosen/chosen.min.css" type="text/css" media="screen" />' . "\r\n";
+function courses_register_visit($pagepath, $tag, $xchan = NULL, $datetime = NULL) {
+	if ($datetime === NULL) $datetime = datetime_convert();
+	if ($xchan === NULL) $xchan = get_observer_hash();
+	// TODO: verificar que a página existe neste servidor
+	$r=q("INSERT INTO `coursevisits` (coursevisits_xchan, coursevisits_time, coursevisits_pagepath, coursevisits_tag) values (%d, %d, %d, %d) ON DUPLICATE KEY UPDATE id=id",
+		dbesc($xchan),
+		dbesc($datetime),
+		dbesc($pagepath),
+		dbesc($tag)
+	);
 }
+
+function courses_has_visited($pagepath, $tag, $xchan = NULL) {
+	if ($xchan === NULL) $xchan = get_observer_hash();
+	$r=q("select * from coursevisits where coursevisits_xchan = %d and coursevisits_pagepath = %d and coursevisits_tag = %d limit 1",
+		dbesc($xchan),
+		dbesc($pagepath),
+		dbesc($tag),
+	);
+	return (is_array($r) and count($r)>0) ? true : false;
+}
+
+function courses_menu_attr($pagepath) {
+	$o= ''; $o += ' ';
+	if((!strpos($pagepath,':') === false) or substr_count($pagepath,'/') != 2) return '';
+
+	list($module,$member,$page) = explode('/',$pagepath);
+	if($module!='page') return '';
+
+	$s = q("select channel_id from channel where channel_address = %d limit 1",
+			dbesc($member)
+		);
+	$channel_id = $s[0]['channel_id'];
+	$r = q("select sid from item inner join item_id on item_id.iid = item.id and item_id.uid = item.uid and item.uid = %d and item_id.service = 'BUILDBLOCK' and item_id.sid like '%s-seq-%%'",
+			intval($channel_id),
+			dbesc($page)
+		);
+	function n($x){ return end(explode('-',$x['sid']));}
+	function cmp($a, $b){
+		if (n($a)==n($b)) return 0;
+		return (n($a) < n($b)) ? -1 : 1;
+	}
+	uasort($r, 'cmp');
+
+	$data= [];
+	foreach($r as $rr){
+		$sid= $rr['sid'];
+		$visited= courses_has_visited($pagepath,$sid);
+		if($visited)
+			$data[]= $sid;
+		else {
+			if(count($r) > 1)
+				$data[]= $sid;
+			break;
+		}
+	}
+	$o += (count($data) ? ' data="'.implode(' ',$data).'"' : ' ');
+	$o += ' class="' . (count($r) == count($data) ? 'menu-item-complete' : 'menu-item-incomplete') . '"';
+
+	return $o;
+}
+
+require_once('courses_widgets.php');
 
 function courses_module() { return; }
 
 function courses_init($a){
-  if (! ($a->account['account_service_class'] === 'ppsus') )
-    killme();
+	if (! local_channel())
+		return;
+	if (! ( ($a->account['account_service_class'] === 'p2s') or ($a->account['account_service_class'] === 'p8s') ) )
+		return;
 
-  if (argc()<2)
-    killme();
-  if (argv(1)=='form'){
-    killme();
-  }
-  if (argv(1)=='connect'){
-    killme();
-  }
-  killme();
+	$pagepath=argv(2).'/'.argv(3).'/'.argv(4);
+	$tag=argv(5);
+	if (argv(1)=='visit'){
+		courses_register_visit($pagepath, $tag);
+		killme();
+	}
+
+	if (argv(1)=='hasvisited'){
+		return courses_has_visited($pagepath, $tag);
+	}
+	killme();
 }

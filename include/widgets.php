@@ -7,7 +7,7 @@
 
 require_once('include/dir_fns.php');
 require_once('include/contact_widgets.php');
-require_once('custom/course_widgets.php');
+
 
 function widget_profile($args) {
 	$a = get_app();

@@ -8,16 +8,16 @@
 function widget_coursetabs($arr){
 	$o = '';
 
-	$channel_id = comanche_get_channel_id();
 	$name= argv(2);
+	function n($x){ return end(explode('-',$x['sid']));}
 
 	$o .= widget_courserpost(['name'=>$name,]);
 
-	$r = q("select * from item inner join item_id on iid = item.id and item_id.uid = item.uid and item.uid = %d and service = 'BUILDBLOCK' and sid like '%s-seq-%%'",
+	$channel_id = comanche_get_channel_id();
+	$r = q("select * from item inner join item_id on item_id.iid = item.id and item_id.uid = item.uid and item.uid = %d and item_id.service = 'BUILDBLOCK' and item_id.sid like '%s-seq-%%'",
 			intval($channel_id),
 			dbesc($name)
 		);
-	function n($x){ return end(explode('-',$x['sid']));}
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
@@ -69,3 +69,23 @@ function widget_courserpost($arr){
 	$rpost_div = '<div id="rpost-data" style="display:none">' . rpost_content($a) . '</div>';
 	return $rpost_div;
 }
+
+function widget_coursemenu($arr){
+	$o = '';
+
+	$o += '<div id="accordion">';
+
+	$deep = false;
+	foreach($arr as $key => $value){
+		$type = explode('_', $key);
+		if ($type[0] == 'header' and $type[1] == 'title') { if($deep) $o += '</div>'; $o += '<h3>'.$value.'</h3><div>'; $deep=true;}
+		if ($type[0] == 'item' and $type[1] == 'href') $o += '<p><a href="'.$value.'" '.courses_menu_attr($value).'>';
+		if ($type[0] == 'item' and $type[1] == 'title') $o += $value.'</a></p>';
+	}
+	$o += '</div>';
+	$deep = false;
+	$o += '</div>';
+
+	return $o;
+}
+
