@@ -51,7 +51,7 @@ function courses_has_visited($pagepath, $tag, $xchan = NULL) {
 	$r=q("select * from coursevisits where coursevisits_xchan = %d and coursevisits_pagepath = %d and coursevisits_tag = %d limit 1",
 		dbesc($xchan),
 		dbesc($pagepath),
-		dbesc($tag),
+		dbesc($tag)
 	);
 	return (is_array($r) and count($r)>0) ? true : false;
 }
