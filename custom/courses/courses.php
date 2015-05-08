@@ -50,9 +50,11 @@ function courses_module() { return; }
 
 function courses_init($a){
 	if (! local_channel())
-		return;
-	if (! ( ($a->account['account_service_class'] === 'p2s') or ($a->account['account_service_class'] === 'p8s') ) )
-		return;
+		killme();
+//	if (! ( ($a->account['account_service_class'] === 'p2s') or ($a->account['account_service_class'] === 'p8s') ) )
+//		killme();
+	if (argc != 6)
+		killme();
 
 	$pagepath=argv(2).'/'.argv(3).'/'.argv(4);
 	$tag=argv(5);

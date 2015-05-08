@@ -7,6 +7,7 @@
   <script src="<?php echo $a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.js' ?>"></script>
   <script>
   var baseurl="<?php echo $a->get_baseurl() ?>";
+  var modulename="<?php echo argv(0) ?>";
   var channelname="<?php echo argv(1) ?>";
   var pagename="<?php echo argv(2) ?>";
   var makeTabs = function(selector) {
@@ -44,7 +45,8 @@
           disabled: seqdisabled,
           active: seqlastenabled,
           create: function( e, ui ) { updateSeqButtons(ui.tab.index()); },
-          beforeActivate: function( e, ui ) { updateSeqButtons(ui.newTab.index()); }
+          beforeActivate: function( e, ui ) { updateSeqButtons(ui.newTab.index()); },
+          activate: function( e, ui ) { $.ajax(baseurl+'/courses/click/'+modulename+'/'+channelname+'/'+pagename+'/'+ui.oldTab.attr('id')); }
       });
 
       $( ".sequence-button-previous" ).click(function() {

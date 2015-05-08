@@ -23,10 +23,10 @@ function courses_menu_attr($pagepath) {
 	list($module,$member,$page) = explode('/',$pagepath);
 	if($module!='page') return '';
 
-	$s = q("select channel_id from channel where channel_address = %d limit 1",
+	$r_c = q("select channel_id from channel where channel_address = '%s' limit 1",
 			dbesc($member)
-		);
-	$channel_id = $s[0]['channel_id'];
+			);
+	$channel_id = $r_c[0]['channel_id'];
 	$r = q("select sid from item inner join item_id on item_id.iid = item.id and item_id.uid = item.uid and item.uid = %d and item_id.service = 'BUILDBLOCK' and item_id.sid like '%s-seq-%%'",
 			intval($channel_id),
 			dbesc($page)
