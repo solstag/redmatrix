@@ -8,6 +8,8 @@
 require_once('include/dir_fns.php');
 require_once('include/contact_widgets.php');
 
+require_once('custom/courses_widgets.php');
+
 function widget_profile($args) {
 	$a = get_app();
 	$block = (((get_config('system', 'block_public')) && (! local_channel()) && (! remote_channel())) ? true : false);
