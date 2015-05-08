@@ -90,7 +90,7 @@ function courses_menu_attr($pagepath) {
 			break;
 		}
 	}
-	$o += (count($data) ? ' data="'.implode(' ',$data).'"' : ' ');
+	$o += ' data="'.implode(' ',$data).'"';
 	$o += ' class="' . (count($r) == count($data) ? 'menu-item-complete' : 'menu-item-incomplete') . '"';
 
 	return $o;
