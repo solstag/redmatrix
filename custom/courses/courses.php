@@ -7,34 +7,30 @@
  * ToDo: most of it
  */
 
-/*
-Building a course:
-*In the webpages module, create a new layout using the "sequence" template
-*Place [widget=coursetabs]...[/widget] and [widget=coursetabs][/widget] in your layout
-*Build the menu by passing a sequence of variables to the widget: header_title_$id and item_{href,title}_$id
-*Menu will be ordered like the variables passed
-*Sequence tabs are webpage blocks named "$pagename-seq-$tabname"
-*Tabs are ordered according to php string comparison on $tabname
-*/
-
 function courses_install(){
   $r=q("CREATE TABLE IF NOT EXISTS `coursevisits` (
-		  `coursevisits_id`    int(10) unsigned NOT NULL AUTO_INCREMENT,
-		  `coursevisits_xchan` char(255)        NOT NULL DEFAULT '',
-		  `coursevisits_time`  datetime         NOT NULL DEFAULT '0000-00-00 00:00:00',
-		  `coursevisits_pagepath`  char(255)    NOT NULL DEFAULT '',
-		  `coursevisits_tag`   char(255)        NOT NULL DEFAULT '',
-		  PRIMARY KEY (`coursevisits_id`),
-		  UNIQUE (coursevisits_xchan,coursevisits_pagepath,coursevisits_tag)
-	  ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;");
+  `coursevisits_id`    int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `coursevisits_xchan` char(255)        NOT NULL DEFAULT '',
+  `coursevisits_time`  datetime         NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `coursevisits_pagepath`  char(46)    NOT NULL DEFAULT '',
+  `coursevisits_tag`   char(32)        NOT NULL DEFAULT '',
+  PRIMARY KEY (`coursevisits_id`),
+  UNIQUE (coursevisits_xchan,coursevisits_pagepath,coursevisits_tag)
+  ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;");
+  return;
 }
 
+function courses_uninstall() {
+	return;
+}
 
 function courses_load() {
+	return;
 //  register_hook('hook_name', 'addon/mascara/courses.php', 'courses_hook_name');
 }
 
 function courses_unload() {
+	return;
 //  unregister_hook('hook_name', 'addon/mascara/courses.php', 'courses_hook_name');
 }
 
