@@ -46,7 +46,7 @@
           active: seqlastenabled,
           create: function( e, ui ) { updateSeqButtons(ui.tab.index()); },
           beforeActivate: function( e, ui ) { updateSeqButtons(ui.newTab.index()); },
-          activate: function( e, ui ) { $.ajax(baseurl+'/courses/click/'+modulename+'/'+channelname+'/'+pagename+'/'+ui.oldTab.attr('id')); }
+          activate: function( e, ui ) { $.ajax(baseurl+'/courses/visit/'+modulename+'/'+channelname+'/'+pagename+'/'+ui.oldTab.attr('id')); }
       });
 
       $( ".sequence-button-previous" ).click(function() {

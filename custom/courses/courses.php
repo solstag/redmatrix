@@ -38,7 +38,7 @@ function courses_register_visit($pagepath, $tag, $xchan = NULL, $datetime = NULL
 	if ($datetime === NULL) $datetime = datetime_convert();
 	if ($xchan === NULL) $xchan = get_observer_hash();
 	// TODO: verificar que a página existe neste servidor
-	$r=q("INSERT INTO `coursevisits` (coursevisits_xchan, coursevisits_time, coursevisits_pagepath, coursevisits_tag) values (%d, %d, %d, %d) ON DUPLICATE KEY UPDATE id=id",
+	$r=q("INSERT INTO coursevisits (coursevisits_xchan, coursevisits_time, coursevisits_pagepath, coursevisits_tag) values (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE coursevisits_id=coursevisits_id",
 		dbesc($xchan),
 		dbesc($datetime),
 		dbesc($pagepath),
