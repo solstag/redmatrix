@@ -96,7 +96,7 @@ function courses_menu_attr($pagepath) {
 	return $o;
 }
 
-require_once('courses_widgets.php');
+require_once('addon/courses/courses_widgets.php');
 
 function courses_module() { return; }
 
