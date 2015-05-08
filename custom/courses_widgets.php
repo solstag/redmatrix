@@ -31,10 +31,10 @@ function courses_menu_attr($pagepath) {
 			intval($channel_id),
 			dbesc($page)
 		);
-	if(!function_exists("n"){
+	if(!function_exists("n")){
 	function n($x){ return end(explode('-',$x['sid']));}
 	}
-	if(!function_exists("cmp"){
+	if(!function_exists("cmp")){
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
@@ -67,7 +67,7 @@ function widget_coursetabs($arr){
 	$o= '';
 
 	$name= argv(2);
-	if(!function_exists("n"){
+	if(!function_exists("n")){
 	function n($x){ return end(explode('-',$x['sid']));}
 	}
 
@@ -78,7 +78,7 @@ function widget_coursetabs($arr){
 			intval($channel_id),
 			dbesc($name)
 		);
-	if(!function_exists("cmp"){
+	if(!function_exists("cmp")){
 	function cmp($a, $b){
 		if (n($a)==n($b)) return 0;
 		return (n($a) < n($b)) ? -1 : 1;
