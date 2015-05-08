@@ -8,7 +8,7 @@
 
 function courses_has_visited($pagepath, $tag, $xchan = NULL) {
 	if ($xchan === NULL) $xchan = get_observer_hash();
-	$r=q("select * from coursevisits where coursevisits_xchan = %s and coursevisits_pagepath = %s and coursevisits_tag = %s limit 1",
+	$r=q("select * from coursevisits where coursevisits_xchan = '%s' and coursevisits_pagepath = '%s' and coursevisits_tag = '%s' limit 1",
 		dbesc($xchan),
 		dbesc($pagepath),
 		dbesc($tag)
