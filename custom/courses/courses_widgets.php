@@ -5,6 +5,74 @@
  * @brief Widgets for course pages used togheter with the sequence template
  */
 
+
+
+function courses_register_visit($pagepath, $tag, $xchan = NULL, $datetime = NULL) {
+	if ($datetime === NULL) $datetime = datetime_convert();
+	if ($xchan === NULL) $xchan = get_observer_hash();
+	// TODO: verificar que a página existe neste servidor
+	$r=q("INSERT INTO `coursevisits` (coursevisits_xchan, coursevisits_time, coursevisits_pagepath, coursevisits_tag) values (%d, %d, %d, %d) ON DUPLICATE KEY UPDATE id=id",
+		dbesc($xchan),
+		dbesc($datetime),
+		dbesc($pagepath),
+		dbesc($tag)
+	);
+}
+
+function courses_has_visited($pagepath, $tag, $xchan = NULL) {
+	if ($xchan === NULL) $xchan = get_observer_hash();
+	$r=q("select * from coursevisits where coursevisits_xchan = %d and coursevisits_pagepath = %d and coursevisits_tag = %d limit 1",
+		dbesc($xchan),
+		dbesc($pagepath),
+		dbesc($tag)
+	);
+	return (is_array($r) and count($r)>0) ? true : false;
+}
+
+function courses_menu_attr($pagepath) {
+	$o= ''; $o += ' ';
+	if((!strpos($pagepath,':') === false) or substr_count($pagepath,'/') != 2) return '';
+
+	list($module,$member,$page) = explode('/',$pagepath);
+	if($module!='page') return '';
+
+	$s = q("select channel_id from channel where channel_address = %d limit 1",
+			dbesc($member)
+		);
+	$channel_id = $s[0]['channel_id'];
+	$r = q("select sid from item inner join item_id on item_id.iid = item.id and item_id.uid = item.uid and item.uid = %d and item_id.service = 'BUILDBLOCK' and item_id.sid like '%s-seq-%%'",
+			intval($channel_id),
+			dbesc($page)
+		);
+	function n($x){ return end(explode('-',$x['sid']));}
+	function cmp($a, $b){
+		if (n($a)==n($b)) return 0;
+		return (n($a) < n($b)) ? -1 : 1;
+	}
+	uasort($r, 'cmp');
+
+	$data= [];
+	foreach($r as $rr){
+		$sid= $rr['sid'];
+		$visited= courses_has_visited($pagepath,$sid);
+		if($visited)
+			$data[]= $sid;
+		else {
+			if(count($r) > 1)
+				$data[]= $sid;
+			break;
+		}
+	}
+	$o += ' data="'.implode(' ',$data).'"';
+	$o += ' class="' . (count($r) == count($data) ? 'menu-item-complete' : 'menu-item-incomplete') . '"';
+
+	return $o;
+}
+
+
+/* ACTUAL WIDGETS BELOW */
+
+
 function widget_coursetabs($arr){
 	$o = '';
 
