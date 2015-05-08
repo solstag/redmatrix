@@ -3,8 +3,8 @@
 <head>
   <title><?php if(x($page,'title')) echo $page['title'] ?></title>
   <?php if(x($a->page,'htmlhead')) echo $a->page['htmlhead'] ?>
-  <link rel="stylesheet" href="'.$a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.css">
-  <script src="'.$a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.js"></script>
+  <link rel="stylesheet" href="<?php echo $a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.css' ?>">
+  <script src="<?php echo $a->get_baseurl().'/addon/courses/jquery-ui/jquery-ui.js' ?>"></script>
   <script>
   var baseurl="<?php echo $a->get_baseurl() ?>";
   var channelname="<?php echo argv(1) ?>";
