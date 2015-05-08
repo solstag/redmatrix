@@ -74,7 +74,7 @@ function courses_menu_attr($pagepath) {
 
 
 function widget_coursetabs($arr){
-	$o = '';
+	$o= '';
 
 	$name= argv(2);
 	function n($x){ return end(explode('-',$x['sid']));}
@@ -139,7 +139,7 @@ function widget_courserpost($arr){
 }
 
 function widget_coursemenu($arr){
-	$o = '';
+	$o= '';
 
 	$o += '<div id="accordion">';
 

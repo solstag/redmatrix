@@ -25,14 +25,16 @@ function courses_uninstall() {
 }
 
 function courses_load() {
-	return;
-//  register_hook('hook_name', 'addon/mascara/courses.php', 'courses_hook_name');
+	register_hook('init_0','addon/courses/courses.php','courses_loader');
 }
 
 function courses_unload() {
-	return;
-//  unregister_hook('hook_name', 'addon/mascara/courses.php', 'courses_hook_name');
+	unregister_hook('init_0','addon/courses/courses.php','courses_loader');
 }
+
+function courses_loader() {};
+
+require_once('addon/courses/courses_widgets.php');
 
 function courses_module() { return; }
 
@@ -41,8 +43,6 @@ function courses_init($a){
 		return;
 	if (! ( ($a->account['account_service_class'] === 'p2s') or ($a->account['account_service_class'] === 'p8s') ) )
 		return;
-
-require_once('addon/courses/courses_widgets.php');
 
 	$pagepath=argv(2).'/'.argv(3).'/'.argv(4);
 	$tag=argv(5);
