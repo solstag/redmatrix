@@ -791,13 +791,15 @@ function item_post(&$a) {
 			}
 		}
 
-		logger('Encrypting local storage');
-		$key = get_config('system','pubkey');
-		$datarray['item_flags'] = $datarray['item_flags'] | ITEM_OBSCURED;
-		if($datarray['title'])
-			$datarray['title'] = json_encode(crypto_encapsulate($datarray['title'],$key));
-		if($datarray['body'])
-			$datarray['body']  = json_encode(crypto_encapsulate($datarray['body'],$key));
+		if(!get_config('system','item_store_plaintext')){
+			logger('Encrypting local storage');
+			$key = get_config('system','pubkey');
+			$datarray['item_flags'] = $datarray['item_flags'] | ITEM_OBSCURED;
+			if($datarray['title'])
+				$datarray['title'] = json_encode(crypto_encapsulate($datarray['title'],$key));
+			if($datarray['body'])
+				$datarray['body']  = json_encode(crypto_encapsulate($datarray['body'],$key));
+		}
 	}
 
 	if($orig_post) {
