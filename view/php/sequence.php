@@ -46,7 +46,6 @@
           active: seqlastenabled,
           create: function( e, ui ) { updateSeqButtons(ui.tab.index()); },
           beforeActivate: function( e, ui ) { updateSeqButtons(ui.newTab.index()); },
-          activate: function( e, ui ) { $.ajax(baseurl+'/courses/visit/'+modulename+'/'+channelname+'/'+pagename+'/'+ui.oldTab.attr('id')); }
       });
 
       $( ".sequence-button-previous" ).click(function() {
@@ -54,9 +53,11 @@
           $( selector ).tabs( "option", "active", newindex );
       });
       $( ".sequence-button-next" ).click(function() {
-          var newindex = $( selector ).tabs( "option", "active") + 1 ;
+          var oldindex = $( selector ).tabs( "option", "active") ;
+          var newindex = oldindex+1;
           $( selector ).tabs( "enable", newindex );
           $( selector ).tabs( "option", "active", newindex );
+          $.ajax(baseurl+'/courses/visit/'+modulename+'/'+channelname+'/'+pagename+'/'+$(selector).find("> div.ui-tabs-panel:eq("+oldindex+")").attr('id') ); 
       });
       var activeindex=$( selector ).tabs( "option", "active");
       for(var i=activeindex; i>0; i--){ $( selector ).tabs("enable", i ); }

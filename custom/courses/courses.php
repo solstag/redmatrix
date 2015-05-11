@@ -25,14 +25,19 @@ function courses_uninstall() {
 }
 
 function courses_load() {
-//	register_hook('init_0','addon/courses/courses.php','courses_loader');
+	register_hook('init_1','addon/courses/courses.php','courses_loader');
 }
 
 function courses_unload() {
-//	unregister_hook('init_0','addon/courses/courses.php','courses_loader');
+	unregister_hook('init_1','addon/courses/courses.php','courses_loader');
 }
 
 function courses_loader() {};
+
+require_once('addon/courses/courses_widgets.php');
+
+
+function courses_module() { return; }
 
 function courses_register_visit($pagepath, $tag, $xchan = NULL, $datetime = NULL) {
 	if ($datetime === NULL) $datetime = datetime_convert();
@@ -46,14 +51,12 @@ function courses_register_visit($pagepath, $tag, $xchan = NULL, $datetime = NULL
 	);
 }
 
-function courses_module() { return; }
-
 function courses_init($a){
 	if (! local_channel())
 		killme();
 //	if (! ( ($a->account['account_service_class'] === 'p2s') or ($a->account['account_service_class'] === 'p8s') ) )
 //		killme();
-	if (argc != 6)
+	if (argc() != 6)
 		killme();
 
 	$pagepath=argv(2).'/'.argv(3).'/'.argv(4);
