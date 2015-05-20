@@ -25,7 +25,7 @@ for a in "${filelist[@]}" ; do
 #		echo 'ignoring git'
 		continue;
 	fi
-	if [ ! -d ../extend/theme/$1/$base ]; then
+	if [ ! -d ../extend/addon/$1/$base ]; then
 #		echo $a 'not a directory'
 		continue;
 	fi
@@ -35,5 +35,5 @@ for a in "${filelist[@]}" ; do
 	fi
 
 	echo linking $base 
-	ln -s ../extend/theme/$1/$base $base
+	ln -s ../extend/addon/$1/$base $base
 done

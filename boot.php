@@ -45,11 +45,11 @@ require_once('include/Contact.php');
 require_once('include/account.php');
 
 
-define ( 'RED_PLATFORM',            'redmatrix' );
+define ( 'PLATFORM_NAME',            'redmatrix' );
 define ( 'RED_VERSION',             trim(file_get_contents('version.inc')) . 'R');
 define ( 'ZOT_REVISION',            1     );
 
-define ( 'DB_UPDATE_VERSION',       1140  );
+define ( 'DB_UPDATE_VERSION',       1141  );
 
 /**
  * @brief Constant with a HTML line break.
@@ -651,6 +651,7 @@ class App {
 	public  $observer   = null;            // xchan record of the page observer
 	public  $profile_uid = 0;              // If applicable, the channel_id of the "page owner"
 	public  $poi        = null;            // "person of interest", generally a referenced connection
+	private $oauth_key  = null;            // consumer_id of oauth request, if used
 	public  $layout     = array();         // Comanche parsed template
 	public  $pdl        = null;
 	private $perms      = null;            // observer permissions
@@ -934,6 +935,7 @@ class App {
 		$this->observer = $xchan;
 	}
 
+
 	function get_observer() {
 		return $this->observer;
 	}
@@ -944,6 +946,14 @@ class App {
 
 	function get_perms() {
 		return $this->perms;
+	}
+
+	function set_oauth_key($consumer_id) {
+		$this->oauth_key = $consumer_id;
+	}
+
+	function get_oauth_key() {
+		return $this->oauth_key;
 	}
 
 	function get_apps() {
@@ -1013,7 +1023,7 @@ class App {
 			'$user_scalable' => $user_scalable,
 			'$baseurl' => $this->get_baseurl(),
 			'$local_channel' => local_channel(),
-			'$generator' => RED_PLATFORM . ' ' . RED_VERSION,
+			'$generator' => PLATFORM_NAME . ' ' . RED_VERSION,
 			'$update_interval' => $interval,
 			'$icon' => head_get_icon(),
 			'$head_css' => head_get_css(),
@@ -2139,7 +2149,9 @@ function construct_page(&$a) {
 				}
 
 				// And a couple of convenience macros
-
+				if(strpos($v, '$htmlhead') !== false) {
+					$v = str_replace('$htmlhead', $a->page['htmlhead'], $v);
+				}
 				if(strpos($v, '$nav') !== false) {
 					$v = str_replace('$nav', $a->page['nav'], $v);
 				}

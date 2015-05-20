@@ -1,4 +1,4 @@
-[b]Red Developer Guide[/b]
+[b]$Projectname Developer Guide[/b]
 
 We're pretty relaxed when it comes to developers. We don't have a lot of rules. Some of us are over-worked and if you want to help we're happy to let you help. That said, attention to a few guidelines will make the process smoother and make it easier to work together. We have developers from across the globe with different abilities and different cultural backgrounds and different levels of patience. Our primary rule is to respect others. Sometimes this is hard and sometimes we have very different opinions of how things should work, but if everybody makes an effort, we'll get along just fine.  
 
@@ -19,7 +19,7 @@ to notify us to merge your work.
 
 [b]Translations[/b]
 
-Our translations are managed through Transifex. If you wish to help out translating the Red Matrix to another language, sign up on transifex.com, visit [url=https://www.transifex.com/projects/p/red-matrix/]https://www.transifex.com/projects/p/red-matrix/[/url] and request to join one of the existing language teams or create a new one. Notify one of the core developers when you have a translation update which requires merging, or ask about merging it yourself if you're comfortable with git and PHP. We have a string file called 'messages.po' which is gettext compliant and a handful of email templates, and from there we automatically generate the application's language files.   
+Our translations are managed through Transifex. If you wish to help out translating the $Projectname to another language, sign up on transifex.com, visit [url=https://www.transifex.com/projects/p/red-matrix/]https://www.transifex.com/projects/p/red-matrix/[/url] and request to join one of the existing language teams or create a new one. Notify one of the core developers when you have a translation update which requires merging, or ask about merging it yourself if you're comfortable with git and PHP. We have a string file called 'messages.po' which is gettext compliant and a handful of email templates, and from there we automatically generate the application's language files.   
 
 [zrl=[baseurl]/help/Translations]Translations - More Info[/zrl]
 
@@ -39,7 +39,7 @@ All code contributed to the project falls under the MIT license, unless otherwis
 
 Code changes which fix an obvious bug are pretty straight-forward. For instance if you click "Save" and the thing you're trying to save isn't saved, it's fairly obvious what the intended behaviour should be. Often when developing feature requests, it may affect large numbers of community members and it's possible that other members of the community won't agree with the need for the feature, or with your proposed implementation. They may not see something as a bug or a desirable feature.
 
-We encourage concensus building within the community when it comes to any feature which might be considered controversial or where there isn't unanimous decision that the proposed feature is the correct way to accomplish the task. The first place to pitch your ideas is to [url=https://zothub.com/channel/one]Channel One[/url]. Others may have some input or be able to point out facets of your concept which might be problematic in our environment. But also, you may encounter opposition to your plan. This doesn't mean you should stop and/or ignore the feature. Listen to the concerns of others and try and work through any implementation issues. 
+We encourage consensus building within the community when it comes to any feature which might be considered controversial or where there isn't unanimous decision that the proposed feature is the correct way to accomplish the task. The first place to pitch your ideas is to [url=https://zothub.com/channel/one]Channel One[/url]. Others may have some input or be able to point out facets of your concept which might be problematic in our environment. But also, you may encounter opposition to your plan. This doesn't mean you should stop and/or ignore the feature. Listen to the concerns of others and try and work through any implementation issues. 
 
 There are places where opposition cannot be resolved. In these cases, please consider making your feature [b]optional[/b] or non-default behaviour that must be specifically enabled. This technique can often be used when a feature has significant but less than unanimous support. Those who desire the feature can turn it on and those who don't want it - will leave it turned off.
 

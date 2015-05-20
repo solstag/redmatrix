@@ -130,7 +130,7 @@ function editlayout_content(&$a) {
 	// FIXME A return path with $_SESSION doesn't always work for observer - it may WSoD
 	// instead of loading a sensible page.  So, send folk to the webpage list.
 
-	$rp = '/layouts/' . $which;
+	$rp = 'layouts/' . $which;
 
 	$o .= replace_macros($tpl,array(
 		'$return_path'         => $rp,
@@ -161,8 +161,9 @@ function editlayout_content(&$a) {
 		'$public'              => t('Public post'),
 		'$jotnets'             => $jotnets,
 		'$title'               => htmlspecialchars($itm[0]['title'],ENT_COMPAT,'UTF-8'),
-		'$placeholdertitle'    => t('Title (optional)'),
+		'$placeholdertitle'    => t('Layout Description (Optional)'),
 		'$pagetitle'           => $layout_title,
+		'$placeholdpagetitle'  => t('Layout Name'),
 		'$category'            => '',
 		'$placeholdercategory' => t('Categories (optional, comma-separated list)'),
 		'$emtitle'             => t('Example: bob@example.com, mary@example.com'),

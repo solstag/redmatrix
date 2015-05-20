@@ -173,11 +173,29 @@ function bb_parse_app($match) {
 
 function bb_parse_element($match) {
 	$j = json_decode(base64url_decode($match[1]),true);
+
 	if ($j) {
-		$o = EOL . '<a href="#" onclick="importElement(\'' . $match[1] . '\'); return false;" >' . t('Install design element: ') . $j['pagetitle'] . '</a>' . EOL; 
+		$text = sprintf( t('Install %s element: '), translate_design_element($j['type'])) . $j['pagetitle'];
+		$o = EOL . '<a href="#" onclick="importElement(\'' . $match[1] . '\'); return false;" >' . $text . '</a>' . EOL;
 	}
 
 	return $o;
+}
+
+function translate_design_element($type) {
+	switch($type) {
+		case 'webpage':
+			$ret = t('webpage');
+			break;
+		case 'layout':
+			$ret =  t('layout');
+			break;
+		case 'block':
+			$ret =  t('block');
+			break;
+	}
+
+	return $ret;
 }
 
 /**
@@ -292,7 +310,7 @@ function bb_ShareAttributesSimple($match) {
 	if ($matches[1] != "")
 		$profile = $matches[1];
 
-	$text = '<br />' . html_entity_decode("&#x2672; ", ENT_QUOTES, 'UTF-8') . ' <a href="' . $profile . '">' . $author . '</a>: div class="reshared-content">' . $match[2] . '</div>';
+	$text = html_entity_decode("&#x2672; ", ENT_QUOTES, 'UTF-8') . ' <a href="' . $profile . '">' . $author . '</a>: div class="reshared-content">' . $match[2] . '</div>';
 
 	return($text);
 }
@@ -420,7 +438,11 @@ function bbcode($Text, $preserve_nl = false, $tryoembed = true) {
 	// process [observer] tags before we do anything else because we might
 	// be stripping away stuff that then doesn't need to be worked on anymore
 
-	$observer = $a->get_observer();
+	if(get_config('system','item_cache'))
+		$observer = false;
+	else
+		$observer = $a->get_observer();
+
 	if ((strpos($Text,'[/observer]') !== false) || (strpos($Text,'[/rpost]') !== false)) {
 		if ($observer) {
 			$Text = preg_replace("/\[observer\=1\](.*?)\[\/observer\]/ism", '$1', $Text);
@@ -433,7 +455,11 @@ function bbcode($Text, $preserve_nl = false, $tryoembed = true) {
 		}
 	}
 
-	$channel = $a->get_channel();
+	if(get_config('system','item_cache'))
+		$channel = false;
+	else
+		$channel = $a->get_channel();
+
 	if (strpos($Text,'[/channel]') !== false) {
 		if ($channel) {
 			$Text = preg_replace("/\[channel\=1\](.*?)\[\/channel\]/ism", '$1', $Text);

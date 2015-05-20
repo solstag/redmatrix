@@ -706,8 +706,8 @@ function diaspora_request($importer,$xml) {
 		$cnv = random_string();
 		$mid = random_string();
 
-		$msg = t('You have started sharing with a Redmatrix premium channel.');
-		$msg .= t('Redmatrix premium channels are not available for sharing with Diaspora members. This sharing request has been blocked.') . "\r";
+		$msg = t('You have started sharing with a $Projectname premium channel.');
+		$msg .= t('$Projectname premium channels are not available for sharing with Diaspora members. This sharing request has been blocked.') . "\r";
 		$msg .= t('Please do not reply to this message, as this channel is not sharing with you and any reply will not be seen by the recipient.') . "\r";
 
 		$created = datetime_convert('UTC','UTC',$item['created'],'Y-m-d H:i:s \U\T\C');
@@ -2427,6 +2427,20 @@ function diaspora_send_status($item,$owner,$contact,$public_batch = false) {
 	}
 */
 
+	if($item['item_flags'] & ITEM_CONSENSUS) {
+		$poll = replace_macros(get_markup_template('diaspora_consensus.tpl'), array(
+			'$guid_q' => random_string(),
+			'$question' => t('Please choose'),
+			'$guid_y' => random_string(),
+			'$agree' => t('Agree'),
+			'$guid_n' => random_string(),
+			'$disagree' => t('Disagree'),
+			'$guid_a' => random_string(),
+			'$abstain' => t('Abstain')
+		));
+	}
+	else
+		$poll = '';
 
 	$public = (($item['item_private']) ? 'false' : 'true');
 
@@ -2444,17 +2458,18 @@ function diaspora_send_status($item,$owner,$contact,$public_batch = false) {
 			'$handle' => xmlify($myaddr),
 			'$public' => $public,
 			'$created' => $created,
-			'$provider' => (($item['app']) ? $item['app'] : 'redmatrix')
+			'$provider' => (($item['app']) ? $item['app'] : t('$projectname'))
 		));
 	} else {
 		$tpl = get_markup_template('diaspora_post.tpl');
 		$msg = replace_macros($tpl, array(
 			'$body' => xmlify($body),
 			'$guid' => $item['mid'],
+			'$poll' => $poll,
 			'$handle' => xmlify($myaddr),
 			'$public' => $public,
 			'$created' => $created,
-			'$provider' => (($item['app']) ? $item['app'] : 'redmatrix')
+			'$provider' => (($item['app']) ? $item['app'] : t('$projectname'))
 		));
 	}
 

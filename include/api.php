@@ -78,11 +78,14 @@ require_once('include/items.php');
 //			list($consumer,$token) = $oauth->verify_request(OAuthRequest::from_request());
 			if (!is_null($token)){
 				$oauth->loginUser($token->uid);
+
+				$a->set_oauth_key($consumer->key);
+
 				call_hooks('logged_in', $a->user);
 				return;
 			}
 			echo __file__.__line__.__function__."<pre>"; 
-			var_dump($consumer, $token); 
+//			var_dump($consumer, $token); 
 			die();
 		}
 		catch(Exception $e) {
@@ -1937,7 +1940,7 @@ require_once('include/items.php');
 			'private' => $private, 'textlimit' => $textlimit, 'sslserver' => $sslserver, 'ssl' => $ssl,
 			'shorturllength' => '30',
         	'redmatrix' => array(
-				'RED_PLATFORM' => RED_PLATFORM,
+				'PLATFORM_NAME' => PLATFORM_NAME,
 				'RED_VERSION' => RED_VERSION,
 				'ZOT_REVISION' => ZOT_REVISION,
 				'DB_UPDATE_VERSION' => DB_UPDATE_VERSION

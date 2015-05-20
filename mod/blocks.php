@@ -95,6 +95,7 @@ function blocks_content(&$a) {
 		'ptlabel' => t('Block Name'),
 		'profile_uid' => intval($owner),
 		'expanded' => true,
+		'novoting' => true
 	);
 
 	if($_REQUEST['title'])
@@ -107,8 +108,9 @@ function blocks_content(&$a) {
 	$editor = status_editor($a,$x);
 
 	$r = q("select iid, sid, mid, title, body, mimetype, created, edited from item_id left join item on item_id.iid = item.id
-		where item_id.uid = %d and service = 'BUILDBLOCK' order by item.created desc",
-		intval($owner)
+		where item_id.uid = %d and service = 'BUILDBLOCK' and item_restrict = %d order by item.created desc",
+		intval($owner),
+		intval(ITEM_BUILDBLOCK)
 	);
 
 	$pages = null;
@@ -128,7 +130,8 @@ function blocks_content(&$a) {
 			);
 			$pages[$rr['iid']][] = array(
 				'url' => $rr['iid'],
-				'title' => $rr['sid'],
+				'name' => $rr['sid'],
+				'title' => $rr['title'],
 				'created' => $rr['created'],
 				'edited' => $rr['edited'],
 				'bb_element' => '[element]' . base64url_encode(json_encode($element_arr)) . '[/element]'
@@ -143,6 +146,7 @@ function blocks_content(&$a) {
 		'$baseurl' => $url,
 		'$title' => t('Blocks'),
 		'$name' => t('Block Name'),
+		'$blocktitle' => t('Block Title'),
 		'$created' => t('Created'),
 		'$edited' => t('Edited'),
 		'$create' => t('Create'),
