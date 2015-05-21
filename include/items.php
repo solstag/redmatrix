@@ -974,6 +974,14 @@ function import_author_diaspora($x) {
 	if(! $x['address'])
 		return false;
 
+	$r = q("select * from xchan where xchan_addr = '%s' limit 1",
+		dbesc($x['address'])
+	);
+	if($r) {
+		logger('in_cache: ' . $x['address'], LOGGER_DATA);
+		return $r[0]['chan_hash'];
+	}
+
 	if(discover_by_webbie($x['address'])) {
 		$r = q("select xchan_hash from xchan where xchan_addr = '%s' limit 1",
 			dbesc($x['address'])
@@ -2534,6 +2542,7 @@ function item_store_update($arr,$allow_exec = false) {
 
 	$arr['title'] = ((array_key_exists('title',$arr) && strlen($arr['title']))  ? trim($arr['title']) : '');
 	$arr['body']  = ((array_key_exists('body',$arr) && strlen($arr['body']))    ? trim($arr['body'])  : '');
+
 	$arr['attach']        = ((x($arr,'attach'))        ? notags(trim($arr['attach']))        : $orig[0]['attach']);
 	$arr['app']           = ((x($arr,'app'))           ? notags(trim($arr['app']))           : $orig[0]['app']);
 //	$arr['item_restrict'] = ((x($arr,'item_restrict')) ? intval($arr['item_restrict'])       : $orig[0]['item_restrict'] );
@@ -4150,6 +4159,8 @@ function delete_item_lowlevel($item, $stage = DROPITEM_NORMAL, $force = false) {
 
 	$linked_item = (($item['resource_id']) ? true : false);
 
+	logger('item: ' . $item . ' stage: ' . $stage . ' force: ' . $force, LOGGER_DATA);
+
 	switch($stage) {
 		case DROPITEM_PHASE2:
 			$r = q("UPDATE item SET item_restrict = ( item_restrict | %d ), body = '', title = '',
@@ -4381,11 +4392,13 @@ function fetch_post_tags($items,$link = false) {
 
 
 
-function zot_feed($uid,$observer_xchan,$arr) {
+function zot_feed($uid,$observer_hash,$arr) {
 
 	$result = array();
 	$mindate = null;
 	$message_id = null;
+
+	require_once('include/security.php');
 
 	if(array_key_exists('mindate',$arr)) {
 		$mindate = datetime_convert('UTC','UTC',$arr['mindate']);
@@ -4404,14 +4417,14 @@ function zot_feed($uid,$observer_xchan,$arr) {
 	if($message_id)
 		logger('message_id: ' . $message_id,LOGGER_DEBUG);
 
-	if(! perm_is_allowed($uid,$observer_xchan,'view_stream')) {
+	if(! perm_is_allowed($uid,$observer_hash,'view_stream')) {
 		logger('zot_feed: permission denied.');
 		return $result;
 	}
 
 	if(! is_sys_channel($uid)) {
 		require_once('include/security.php');
-		$sql_extra = item_permissions_sql($uid);
+		$sql_extra = item_permissions_sql($uid,$observer_hash);
 	}
 
 	$limit = " LIMIT 100 ";
@@ -4425,6 +4438,7 @@ function zot_feed($uid,$observer_xchan,$arr) {
 		$limit = '';
 	}
 
+
 	$items = array();
 
 	/** @FIXME fix this part for PostgreSQL */
@@ -4434,7 +4448,6 @@ function zot_feed($uid,$observer_xchan,$arr) {
 	}
 
 	if(is_sys_channel($uid)) {
-		require_once('include/security.php');
 		$r = q("SELECT parent, created, postopts from item
 			WHERE uid != %d
 			AND item_private = 0 AND item_restrict = 0 AND uid in (" . stream_perms_api_uids(PERMS_PUBLIC,10,1) . ")
@@ -4642,7 +4655,7 @@ function items_fetch($arr,$channel = null,$observer_hash = null,$client_mode = C
 	//$start = dba_timer();
 
 	require_once('include/security.php');
-	$sql_extra .= item_permissions_sql($channel['channel_id']);
+	$sql_extra .= item_permissions_sql($channel['channel_id'],$observer_hash);
 
 	if ($arr['pages'])
 		$item_restrict = " AND (item_restrict & " . ITEM_WEBPAGE . ") ";
@@ -4748,6 +4761,9 @@ function update_remote_id($channel,$post_id,$webpage,$pagetitle,$namespace,$remo
 
 	$page_type = '';
 
+	if(! $post_id)
+		return;
+	
 	if($webpage & ITEM_WEBPAGE)
 		$page_type = 'WEBPAGE';
 	elseif($webpage & ITEM_BUILDBLOCK)

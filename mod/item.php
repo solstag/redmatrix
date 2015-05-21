@@ -304,6 +304,7 @@ function item_post(&$a) {
 			}
 		}
 	}
+
 		
 	$public_policy = ((x($_REQUEST,'public_policy')) ? escape_tags($_REQUEST['public_policy']) : map_scope($channel['channel_r_stream'],true));
 	if($webpage)
@@ -326,13 +327,15 @@ function item_post(&$a) {
 			$str_group_deny    = $orig_post['deny_gid'];
 			$str_contact_deny  = $orig_post['deny_cid'];
 			$public_policy     = $orig_post['public_policy'];
+			$private           = $orig_post['item_private'];
 		}
 
 		if((strlen($str_group_allow)) 
 			|| strlen($str_contact_allow) 
 			|| strlen($str_group_deny) 
 			|| strlen($str_contact_deny)
-			|| strlen($public_policy)) {
+			|| strlen($public_policy)
+			|| $private) {
 			$private = 1;
 		}
 
@@ -451,8 +454,6 @@ function item_post(&$a) {
 				$expires = NULL_DATE;
 		}
 	}
-
-	$post_type = notags(trim($_REQUEST['type']));
 
 	$mimetype = notags(trim($_REQUEST['mimetype']));
 	if(! $mimetype)
@@ -659,8 +660,19 @@ function item_post(&$a) {
 
 	$item_unseen =  1;
 	
-	if($post_type === 'wall' || $post_type === 'wall-comment')
-		$item_flags = $item_flags | ITEM_WALL;
+
+	// determine if this is a wall post
+
+	if($parent) {
+		if($parent_item['item_flags'] & ITEM_WALL) {
+			$item_flags = $item_flags | ITEM_WALL;
+		}
+	}
+	else {
+		if(! $webpage) {
+			$item_flags = $item_flags | ITEM_WALL;
+		}
+	}
 
 	if($origin)
 		$item_flags = $item_flags | ITEM_ORIGIN;
