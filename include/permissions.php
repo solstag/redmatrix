@@ -898,7 +898,7 @@ function get_roles() {
 	);
 
 	$roles = array(
-		t('Social Networking') => array('social_private' => t('Private')),
+		t('Social Networking') => array('social' => t('Mostly Public'), 'social_private' => t('Private')),
 		t('Other') => array('custom' => t('Custom/Expert Mode')));
 
 	return $roles;
