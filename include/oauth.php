@@ -75,12 +75,12 @@ class FKOAuthDataStore extends OAuthDataStore {
 			$k = $consumer;
 		}
 
-		$r = q("INSERT INTO tokens (id, secret, client_id, scope, expires) VALUES ('%s','%s','%s','%s', UNIX_TIMESTAMP()+%d)",
+		$r = q("INSERT INTO tokens (id, secret, client_id, scope, expires) VALUES ('%s','%s','%s','%s', %d)",
 				dbesc($key),
 				dbesc($sec),
 				dbesc($k),
 				'request',
-				intval(REQUEST_TOKEN_DURATION));
+				time()+intval(REQUEST_TOKEN_DURATION));
 
 		if (!$r) return null;
 		return new OAuthToken($key,$sec);
@@ -104,12 +104,12 @@ class FKOAuthDataStore extends OAuthDataStore {
 		$key = $this->gen_token();
 		$sec = $this->gen_token();
 
-		$r = q("INSERT INTO tokens (id, secret, client_id, scope, expires, uid) VALUES ('%s','%s','%s','%s', UNIX_TIMESTAMP()+%d, %d)",
+		$r = q("INSERT INTO tokens (id, secret, client_id, scope, expires, uid) VALUES ('%s','%s','%s','%s', %d, %d)",
 				dbesc($key),
 				dbesc($sec),
 				dbesc($consumer->key),
 				'access',
-				intval(ACCESS_TOKEN_DURATION),
+				time()+intval(ACCESS_TOKEN_DURATION),
 				intval($uverifier));
 
 		if ($r)
@@ -175,16 +175,8 @@ class FKOAuth1 extends OAuthServer {
 
 		if(strlen($a->channel['channel_timezone'])) {
 			date_default_timezone_set($a->channel['channel_timezone']);
-//			$a->timezone = $a->user['timezone'];
 		}
 
-//		$r = q("SELECT * FROM `contact` WHERE `uid` = %s AND `self` = 1 LIMIT 1",
-//			intval($_SESSION['uid']));
-//		if(count($r)) {
-//			$a->contact = $r[0];
-//			$a->cid = $r[0]['id'];
-//			$_SESSION['cid'] = $a->cid;
-//		}
 //		q("UPDATE `user` SET `login_date` = '%s' WHERE `uid` = %d LIMIT 1",
 //			dbesc(datetime_convert()),
 //			intval($_SESSION['uid'])

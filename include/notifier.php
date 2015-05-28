@@ -412,6 +412,8 @@ function notifier_run($argv, $argc){
 			: false
 		);
 
+
+
 		$uplink = false;
 
 		// $cmd === 'relay' indicates the owner is sending it to the original recipients
