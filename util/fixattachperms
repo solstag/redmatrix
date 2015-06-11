@@ -1,0 +1,78 @@
+#!/usr/bin/env php
+<?php
+
+// Fixes the permissions of attachments
+
+require_once('include/cli_startup.php');
+
+cli_startup();
+
+switch ($argc) {
+    case 3:
+        if($argv[2]=='fuckyeah')
+            $fuckyeah = true;
+    case 2:
+        if(in_array($argv[1],['list','fix'])) {
+            $action = $argv[1];
+            break;
+        }
+    default:
+        echo "Usage: $argv[0] list|fix\nNothing happens...\n";
+        return;
+}
+
+$channel_id=6;
+
+fix_all($channel_id,$action);
+
+function fix_hash($channel, $observer_hash, $hash, $rev, $str_contact_allow,$str_group_allow,$str_contact_deny,$str_group_deny){
+	$r=q('select hash from channel where channel_id=%d',
+		dbesc($uid)
+		);
+	$observer_hash = $ret[0]['hash'];
+
+    $hash = substr($attach,0,strpos($attach,','));
+    $rev = intval(substr($attach,strpos($attach,',')));
+    attach_store($channel,$observer_hash,$options = 'update', array(
+        'hash'      => $hash,
+        'revision'  => $rev,
+        'allow_cid' => $str_contact_allow,
+        'allow_gid'  => $str_group_allow,
+        'deny_cid'  => $str_contact_deny,
+        'deny_gid'  => $str_group_deny
+    )); 
+}
+
+function fix_all($channel_id,$action){
+	$r= q("select hash from attach where uid=%d",
+		intval($channel_id)
+		);
+	foreach( $r as $rr ){
+		$hash=$rr['hash'];
+		$s=q("select allow_cid,deny_cid,allow_gid,deny_gid from item where uid=%d and attach like '%%%s%%'",
+			intval($channel_id),
+			dbesc($hash)
+			);
+
+		if($s===false){ echo "error: $hash item query error\n"; continue; }
+		if(count($s)!=1) { echo "warning: $hash file in zero or multiple posts: " . count($s) . "\n"; continue; }
+
+		if($action==='list'){
+//echo var_export($s,true)."\n";
+//echo $s[0]['allow_cid']."\n";
+			echo $hash ." ". $s[0]['allow_cid'] ." ". $s[0]['deny_cid'] ." ". $s[0]['allow_gid'] ." ". $s[0]['deny_gid'] ."\n";
+		}
+		if($action==='fix'){
+			$t=q("update attach set allow_cid='%s', deny_cid='%s', allow_gid='%s', deny_gid='%s' where hash='%s' and uid=%d",
+				dbesc($s[0]['allow_cid']),
+				dbesc($s[0]['deny_cid']),
+				dbesc($s[0]['allow_gid']),
+				dbesc($s[0]['deny_gid']),
+				dbesc($hash),
+				intval($channel_id)
+				);
+			if ($t) echo "Win!\n" ; else "Oops!\n";
+		}
+	}
+}
+
