@@ -9,17 +9,12 @@ cli_startup();
 
 switch ($argc) {
 	case 3:
-		if($argv[1]==='fix' and is_numeric($argv[2]))
+		if(in_array($argv[1],['list','fix']) and is_numeric($argv[2]))
 			$action = $argv[1];
 			$channel_id = intval($argv[2]);
 			break;
-	case 2:
-		if($argv[1]==='list') {
-			$action = $argv[1];
-			break;
-		}
 	default:
-		echo "Usage: $argv[0] (list|fix [uid])\nNothing happens...\n";
+		echo "Nothing happens...\nUsage: util/".basename($argv[0])." (list|fix) uid\n";
 		return;
 }
 
