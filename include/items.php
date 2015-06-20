@@ -192,6 +192,20 @@ function comments_are_now_closed($item) {
 	return false;
 }
 
+/**
+ * @brief
+ * 
+ * This is a compatibility function primarily for plugins, because 
+ * in future hubzilla (and later) DB schemas the definition of a 
+ * normal item gets a bit more complicated. 
+ *
+ */
+
+function is_item_normal($item) {
+	return((intval($item['item_restrict'])) ? false : true);
+}
+
+
 
 /**
  * @brief
@@ -2541,8 +2555,8 @@ function item_store_update($arr,$allow_exec = false) {
 	$arr['deny_gid']      = ((array_key_exists('deny_gid',$arr))   ? trim($arr['deny_gid'])  : $orig[0]['deny_gid']);
 	$arr['item_private']  = ((array_key_exists('item_private',$arr)) ? intval($arr['item_private']) : $orig[0]['item_private']);
 
-	$arr['title'] = ((array_key_exists('title',$arr) && strlen($arr['title']))  ? trim($arr['title']) : '');
-	$arr['body']  = ((array_key_exists('body',$arr) && strlen($arr['body']))    ? trim($arr['body'])  : '');
+	$arr['title'] = ((array_key_exists('title',$arr))  ? trim($arr['title']) : $orig[0]['title']);
+	$arr['body']  = ((array_key_exists('body',$arr))   ? trim($arr['body'])  : $orig[0]['body']);
 
 	$arr['attach']        = ((x($arr,'attach'))        ? notags(trim($arr['attach']))        : $orig[0]['attach']);
 	$arr['app']           = ((x($arr,'app'))           ? notags(trim($arr['app']))           : $orig[0]['app']);
@@ -2592,12 +2606,11 @@ function item_store_update($arr,$allow_exec = false) {
 		return $ret;
 	}
 
-	$r = q("delete from term where oid = %d and otype = %d",
-		intval($orig_post_id),
-		intval(TERM_OBJ_POST)
-	);
-
-	if(($terms) && (is_array($terms))) {
+	if(is_array($terms)) {
+		$r = q("delete from term where oid = %d and otype = %d",
+			intval($orig_post_id),
+			intval(TERM_OBJ_POST)
+		);
 		foreach($terms as $t) {
 			q("insert into term (uid,oid,otype,type,term,url)
 				values(%d,%d,%d,%d,'%s','%s') ",
@@ -2623,6 +2636,8 @@ function item_store_update($arr,$allow_exec = false) {
 
 	return $ret;
 }
+
+
 
 function store_diaspora_comment_sig($datarray, $channel, $parent_item, $post_id, $walltowall = false) {
 
