@@ -1433,6 +1433,15 @@ header {
 .reshared-content { margin-left: 20px; }
 .shared_header img { margin-right: 10px; }
 
+#share_private_info{
+  background:white;
+  -webkit-transition:background 1s;
+  -moz-transition:background 1s;
+  -o-transition:background 1s;
+  transition:background 1s
+}
+#share_private_info:hover {background:yellow}
+
 .tag1 {
     font-size : 0.9em !important;
   }

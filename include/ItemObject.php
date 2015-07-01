@@ -88,7 +88,7 @@ class Item extends BaseObject {
 			|| strlen($item['deny_cid']) || strlen($item['deny_gid']))))
 			? t('Private Message')
 			: false);
-		$shareable = ((($conv->get_profile_owner() == local_channel() && local_channel()) && ($item['item_private'] != 1)) ? true : false);
+		$shareable = ($conv->get_profile_owner() == local_channel() && local_channel()) ? true : false;
 
 		// allow an exemption for sharing stuff from your private feeds
 		if($item['author']['xchan_network'] === 'rss')
