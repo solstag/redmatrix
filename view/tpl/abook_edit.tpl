@@ -50,6 +50,14 @@
 
 {{/if}}
 
+{{if $connfilter}}
+	{{include file="field_textarea.tpl" field=$incl}}
+	{{include file="field_textarea.tpl" field=$excl}}
+{{else}}
+	<input type="hidden" name="{{$incl.0}}" value="{{$incl.2}}" />
+	<input type="hidden" name="{{$excl.0}}" value="{{$excl.2}}" />
+{{/if}}
+
 {{if $rating}}
 <h3>{{$lbl_rating}}</h3>
 
@@ -57,6 +65,8 @@
 
 
 {{/if}}
+
+
 
 {{/if}}
 
@@ -75,8 +85,7 @@
 
 {{if $rating}}
 {{if $notself}}
-<h3 class="abook-rating-text-desc">{{$lbl_rating_txt}}</h3>
-<textarea name="rating_text" id="rating-text" >{{$rating_txt}}</textarea>
+	{{include file="field_textarea.tpl" field=$rating_text}}
 {{/if}}
 {{/if}}
 
