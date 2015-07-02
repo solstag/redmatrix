@@ -7,6 +7,7 @@ head_add_css('view/css/bootstrap-red.css');
 head_add_css('library/datetimepicker/jquery.datetimepicker.css');
 //head_add_css('library/colorpicker/css/colorpicker.css');
 head_add_css('library/bootstrap-colorpicker/dist/css/bootstrap-colorpicker.min.css');
+head_add_css('library/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css');
 require_once('view/php/theme_init.php');
 
 head_add_js('library/bootstrap/js/bootstrap.min.js');
@@ -16,4 +17,5 @@ head_add_js('library/datetimepicker/jquery.datetimepicker.js');
 //head_add_js('library/colorpicker/js/colorpicker.js');
 head_add_js('library/bootstrap-colorpicker/dist/js/bootstrap-colorpicker.js');
 //head_add_js('library/bootstrap-colorpicker/src/js/docs.js');
+head_add_js('library/bootstrap-switch/dist/js/bootstrap-switch.min.js');
 

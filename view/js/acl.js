@@ -12,10 +12,10 @@ function ACL(backend_url, preset_access){
 	that.kp_timer = null;
 	
 	if (that.preset==undefined) that.preset = [];
-	that.allow_cid = that.preset[0].slice(0);
-	that.allow_gid = that.preset[1].slice(0);
-	that.deny_cid  = that.preset[2].slice(0);
-	that.deny_gid  = that.preset[3].slice(0);
+	that.allow_cid = that.preset[0].slice();
+	that.allow_gid = that.preset[1].slice();
+	that.deny_cid  = that.preset[2].slice();
+	that.deny_gid  = that.preset[3].slice();
 	that.group_uids = [];
 	that.nw = 4; //items per row. should be calulated from #acl-list.width
 
@@ -59,7 +59,8 @@ ACL.prototype.on_submit = function(){
 	});
 	$(that.deny_cid).each(function(i,v){
 		aclfields.append("<input type='hidden' name='contact_deny[]' value='"+v+"'>");
-	});
+	});	
+//	alert(aclfields);
 
 	//areYouSure jquery plugin: recheck the form here
 	$('form').trigger('checkform.areYouSure');

@@ -350,6 +350,144 @@ function enableOnUser(){
 
 </script>
 
+<script language="javascript" type="text/javascript">
+  // TODO:
+  // Deal with included media:
+  // Remove all attachments and warn the member (for now)
+
+  // Returns the reshare ACL to the regular ACL
+  function restoreACL (e) {
+    $("#profile-jot-text").val("");
+    $('#aclModal .modal-title').toggle();
+    $('#aclModal .modal-footer > *').toggle();
+    $('#aclModal').off('hidden.bs.modal', restoreACL);
+    // private post stuff
+    $('.bootstrap-switch-id-show_origin').hide();
+    $('#acl-showall').show();
+    $('#share_private_info').remove();
+  }
+
+  // Flashes the background
+  function bgWarning(el,n) {
+    if(n==0) return;
+    el.css('backgroundColor','yellow');
+    setTimeout(function () {
+      el.css('backgroundColor','white');
+      setTimeout(function(){
+        bgWarning(el,n);
+      }, 1000);
+    }, 500);
+    n--;
+  }
+  
+  function jotShareAdvanced(lock,id) {
+    // spin
+    $('#like-rotator-' + id).spin('tiny');
+
+    // includes the reshare ACL items and switches to it
+    reshareACL();
+
+    // takes the text and includes it in the editor
+    $.get('{{$baseurl}}/share/' + id, function(data) {
+      $("#profile-jot-text").val("");
+      initEditor(function(){
+        $('#aclModal').modal('show');
+        addeditortext(data);
+        $('#like-rotator-' + id).spin(false);
+      });
+    });
+
+    // if in normal ACL, turn it to reshare ACL
+    if ($('#acl_reshare_btn').css('display') == 'none') {
+      $('#aclModal .modal-title').toggle();
+      $('#aclModal .modal-footer > *').toggle();
+    }
+
+    $("#profile-jot-form").off('submit.private_share');
+    $('.bootstrap-switch-id-show_origin').hide();
+    $('#acl-showall').show();
+    $('#share_private_info').remove();
+
+    if(lock!=''){
+      $('.bootstrap-switch-id-show_origin').show();
+      $('#acl-showall').hide();
+      $('#acl-wrapper').prepend("<div id='share_private_info'>Você está compartilhando um post privado. Selecione ao menos uma pessoa ou grupo com quem compartilhá-lo.</div>");
+      // actions to be taken when resharing a private post
+      $("#profile-jot-form").on('submit.private_share',function(){
+        // check if someone was chosen to reshare only with them
+        if($("#acl-fields input[name='contact_allow[]']").length+$("#acl-fields input[name='group_allow[]']").length<=0){
+          $('#aclModal').modal('show');
+          bgWarning($('#share_private_info'),2)
+          return false;
+        }
+        // if original poster is to be concealed from the header, sanitize the message
+        if(!$('#show_origin').bootstrapSwitch('state')){
+          var jot_text = $("#profile-jot-text").val();
+          // TODO: improve this sanitization (share tag might have been altered before submit)
+          var re=/\[share(?:[^\[]*)?posted(?:\s*)=(?:\s*)['"](.{19})/ig
+          var a=re.exec(jot_text)
+          var posted=a[1];
+          re=/\[(share)[^\[]+\]/ig
+          jot_text=jot_text.replace(/\[(share)[^\[]+\]/ig,"[$1 author='Someone' posted='"+posted+"']");
+          $("#profile-jot-text").val(jot_text);
+        }
+      });
+    }
+
+
+    // upon exiting the ACL, return to regular ACL
+    $('#aclModal').on('hidden.bs.modal', restoreACL );
+
+  }
+
+  // Adds new elements to the ACL selector for resharing
+  function reshareACL(){
+    if ($('#acl_reshare_btn').length > 0) 
+      return;
+
+    // switches the title
+    var oldtitle = $('#aclModal .modal-title');
+    var newtitle = oldtitle.clone();
+    newtitle.text('Recompartilhar com');
+    oldtitle.after(newtitle);
+    oldtitle.toggle();
+
+    // edit button: fills the edit box with the post and closes the ACL
+    var btn_edit  = $('<button id="acl_edit_btn" class="btn btn-default" type="button">Editar</button>');
+    btn_edit.click(function(){
+      if ($('#jot-popup').length != 0)
+        $('#jot-popup').show();
+      $(window).scrollTop(0);
+      $('#aclModal').off('hidden.bs.modal', restoreACL); // manter reshare ao sair
+      $('#aclModal').modal('hide');
+    });
+
+    // reshare button: directly reshares the post
+    var btn_share = $('<button id="acl_reshare_btn" class="btn btn-default" type="button">Compartilhar</button>');
+    btn_share.click(function(){
+      $('#profile-jot-form').submit();
+    });
+
+    $('#aclModal .modal-footer > .btn').toggle();
+    $('#aclModal .modal-footer').prepend(btn_edit);
+    $('#aclModal .modal-footer').prepend(btn_share);
+
+    // includes the switch to "show origin"
+    var cb_origin = $('<input type="checkbox" id="show_origin" name="show_origin" checked>');
+    $('#aclModal .modal-footer').prepend(cb_origin);
+    $("#show_origin").bootstrapSwitch({
+      onText:'Autor será exibido',
+      offText:'Autor será ocultado',
+      onColor:'danger',
+      offColor:'success'
+    });
+    $('.bootstrap-switch-id-show_origin').css('width', 335).css('margin-right',5).css('float','left');
+  }
+
+
+</script>
+
+
 <script>
 $( document ).on( "click", ".wall-item-delete-link,.page-delete-link,.layout-delete-link,.block-delete-link", function(e) {
 	var link = $(this).attr("href"); // "get" the intended link in a var
