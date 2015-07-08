@@ -266,7 +266,7 @@ function connections_content(&$a) {
 	$tabs = array(
 		array(
 			'label' => t('Suggestions'),
-			'url'   => z_root() . '/suggest', 
+			'url'   => z_root() . ( ($a->account['account_service_class'] === 'ppsus') ? '' : '/suggest' ), 
 			'sel'   => '',
 			'title' => t('Suggest new connections'),
 		),
