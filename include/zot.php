@@ -1110,13 +1110,18 @@ function zot_import($arr, $sender_url) {
 				logger('specific recipients');
 				$recip_arr = array();
 				foreach($i['notify']['recipients'] as $recip) {
-					$recip_arr[] =  make_xchan_hash($recip['guid'],$recip['guid_sig']);
+					if(is_array($recip)) {
+						$recip_arr[] =  make_xchan_hash($recip['guid'],$recip['guid_sig']);
+					}
 				}
-				stringify_array_elms($recip_arr);
-				$recips = implode(',',$recip_arr);
-				$r = q("select channel_hash as hash from channel where channel_hash in ( " . $recips . " ) and not ( channel_pageflags & %d ) > 0 ",
-					intval(PAGE_REMOVED)
-				);
+				$r = false;
+				if($recip_arr) {
+					stringify_array_elms($recip_arr);
+					$recips = implode(',',$recip_arr);
+					$r = q("select channel_hash as hash from channel where channel_hash in ( " . $recips . " ) and not ( channel_pageflags & %d ) > 0 ",
+						intval(PAGE_REMOVED)
+					);
+				}
 				if(! $r) {
 					logger('recips: no recipients on this site');
 					continue;
@@ -2887,7 +2892,12 @@ function process_channel_sync_delivery($sender, $arr, $deliveries) {
 		}
 
 		if(array_key_exists('channel',$arr) && is_array($arr['channel']) && count($arr['channel'])) {
-			$disallowed = array('channel_id','channel_account_id','channel_primary','channel_prvkey', 'channel_address', 'channel_notifyflags');
+			if(array_key_exists('channel_removed',$arr['channel']))
+				$arr['channel_pageflags'] |= PAGE_REMOVED;
+			if(array_key_exists('channel_system',$arr['channel']))
+				$arr['channel_pageflags'] |= PAGE_SYSTEM;
+			
+			$disallowed = array('channel_id','channel_account_id','channel_primary','channel_prvkey', 'channel_address', 'channel_notifyflags', 'channel_removed', 'channel_system');
 
 			$clean = array();
 			foreach($arr['channel'] as $k => $v) {
@@ -3200,7 +3210,7 @@ function process_channel_sync_delivery($sender, $arr, $deliveries) {
 				}
 				if(count($clean)) {
 					foreach($clean as $k => $v) {
-						$r = dbq("UPDATE profile set " . dbesc($k) . " = '" . dbesc($v)
+						$r = dbq("UPDATE profile set `" . dbesc($k) . "` = '" . dbesc($v)
 						. "' where profile_guid = '" . dbesc($profile['profile_guid']) . "' and uid = " . intval($channel['channel_id']));
 					}
 				}
