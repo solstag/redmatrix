@@ -1277,7 +1277,8 @@ function public_recips($msg) {
 	$include_sys = false;
 
 	if($msg['message']['type'] === 'activity') {
-		$include_sys = true;
+		if(! get_config('system','disable_discover_tab'))
+			$include_sys = true;
 		$col = 'channel_w_stream';
 		$field = PERMS_W_STREAM;
 		if(array_key_exists('flags',$msg['message']) && in_array('thread_parent', $msg['message']['flags'])) {
@@ -1559,8 +1560,9 @@ function process_delivery($sender, $arr, $deliveries, $relay, $public = false, $
 
 		$tag_delivery = tgroup_check($channel['channel_id'],$arr);
 
-		$perm = (($arr['mid'] == $arr['parent_mid']) ? 'send_stream' : 'post_comments');
-
+		$perm = 'send_stream';
+		if(($arr['mid'] !== $arr['parent_mid']) && ($relay))
+			$perm = 'post_comments';
 
 		// This is our own post, possibly coming from a channel clone
 

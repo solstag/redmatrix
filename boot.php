@@ -49,7 +49,7 @@ define ( 'PLATFORM_NAME',            'redmatrix' );
 define ( 'RED_VERSION',             trim(file_get_contents('version.inc')) . 'R');
 define ( 'ZOT_REVISION',            1     );
 
-define ( 'DB_UPDATE_VERSION',       1144  );
+define ( 'DB_UPDATE_VERSION',       1145  );
 
 /**
  * @brief Constant with a HTML line break.
@@ -2051,7 +2051,6 @@ function load_pdl(&$a) {
 
 		if((! $s) && (($p = theme_include($n)) != ''))
 			$s = @file_get_contents($p);
-
 		if($s) {
 			comanche_parser($a, $s);
 			$a->pdl = $s;

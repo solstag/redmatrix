@@ -1,4 +1,6 @@
 <?php
+use Sabre\VObject;
+
 /**
  * @file include/event.php
  */
@@ -15,6 +17,7 @@ function format_event_html($ev) {
 
 	if(! ((is_array($ev)) && count($ev)))
 		return '';
+
 
 	$bd_format = t('l F d, Y \@ g:i A') ; // Friday January 18, 2011 @ 8:01 AM
 
@@ -90,6 +93,7 @@ function format_event_ical($ev) {
 		$o .= "\nLOCATION:" . format_ical_text($ev['location']);
 	if($ev['description']) 
 		$o .= "\nDESCRIPTION:" . format_ical_text($ev['description']);
+	$o .= "\nUID:" . $ev['event_hash'] ;
 	$o .= "\nEND:VEVENT\n";
 
 	return $o;
@@ -100,7 +104,7 @@ function format_ical_text($s) {
 	require_once('include/bbcode.php');
 	require_once('include/html2plain.php');
 
-	return(wordwrap(html2plain(bbcode($s)),72,"\n ",true));
+	return(wordwrap(str_replace(',','\\,',html2plain(bbcode($s))),72,"\n ",true));
 }
 
 
@@ -162,7 +166,18 @@ function bbtoevent($s) {
 	$match = '';
 	if(preg_match("/\[event\-adjust\](.*?)\[\/event\-adjust\]/is",$s,$match))
 		$ev['adjust'] = $match[1];
-	$ev['nofinish'] = (((x($ev, 'start') && $ev['start']) && (!x($ev, 'finish') || !$ev['finish'])) ? 1 : 0);
+	if(array_key_exists('start',$ev)) {
+		if(array_key_exists('finish',$ev)) {
+			if($ev['finish'] === $ev['start'])
+				$ev['nofinish'] = 1;
+			elseif($ev['finish'])
+				$ev['nofinish'] = 0;
+			else
+				$ev['nofinish'] = 1;
+		}
+		else
+			$ev['nofinish'] = 1;
+	}
 
 	return $ev;
 }
@@ -207,6 +222,7 @@ function event_store_event($arr) {
 	$arr['edited']      = (($arr['edited'])      ? $arr['edited']      : datetime_convert());
 	$arr['type']        = (($arr['type'])        ? $arr['type']        : 'event' );
 	$arr['event_xchan'] = (($arr['event_xchan']) ? $arr['event_xchan'] : '');
+
 
 	// Existing event being modified
 
@@ -275,7 +291,11 @@ function event_store_event($arr) {
 
 		// New event. Store it.
 
-		$hash = random_string();
+
+		if(array_key_exists('external_id',$arr))
+			$hash = $arr['external_id'];
+		else
+			$hash = random_string() . '@' . get_app()->get_hostname();
 
 		$r = q("INSERT INTO event ( uid,aid,event_xchan,event_hash,created,edited,start,finish,summary,description,location,type,
 			adjust,nofinish,allow_cid,allow_gid,deny_cid,deny_gid)
@@ -361,6 +381,130 @@ function event_addtocal($item_id, $uid) {
 	}
 
 	return false;
+}
+
+
+function parse_ical_file($f,$uid) {
+require_once('vendor/autoload.php');
+
+	$s = @file_get_contents($f);
+
+	// Change the current timezone to something besides UTC.
+	// Doesn't matter what it is, as long as it isn't UTC.
+	// Save the current timezone so we can reset it when we're done processing.
+
+	$saved_timezone = date_default_timezone_get();
+	date_default_timezone_set('Australia/Sydney');
+
+	$ical = VObject\Reader::read($s);
+
+	if($ical) {
+		foreach($ical->VEVENT as $event) {
+			event_import_ical($event,$uid);
+
+		}
+	}
+
+	date_default_timezone_set($saved_timezone);
+
+	if($ical)
+		return true;
+	return false;
+}
+
+
+
+function event_import_ical($ical, $uid) {
+
+	$c = q("select * from channel where channel_id = %d limit 1",
+		intval($uid)
+	);
+
+	if(! $c)
+		return false;
+
+	$channel = $c[0];
+	$ev = array();
+
+
+	if(! isset($ical->DTSTART)) {
+		logger('no event start');
+		return false;
+	}
+
+	$dtstart = $ical->DTSTART->getDateTime();
+
+//	logger('dtstart: ' . var_export($dtstart,true));
+
+	if(($dtstart->timezone_type == 2) || (($dtstart->timezone_type == 3) && ($dtstart->timezone === 'UTC'))) {
+		$ev['adjust'] = 1;
+	}
+	else {
+		$ev['adjust'] = 0;
+	}
+	
+	$ev['start'] = datetime_convert((($ev['adjust']) ? 'UTC' : date_default_timezone_get()),'UTC',
+		$dtstart->format(\DateTime::W3C));
+
+
+	if(isset($ical->DTEND)) {
+		$dtend = $ical->DTEND->getDateTime();
+		$ev['finish'] = datetime_convert((($ev['adjust']) ? 'UTC' : date_default_timezone_get()),'UTC',
+			$dtend->format(\DateTime::W3C));
+	}
+	else
+		$ev['nofinish'] = 1;
+
+
+	if($ev['start'] === $ev['finish'])
+		$ev['nofinish'] = 1;
+
+	if(isset($ical->CREATED)) {
+		$created = $ical->CREATED->getDateTime();
+		$ev['created'] = datetime_convert('UTC','UTC',$created->format(\DateTime::W3C));
+	}
+
+	if(isset($ical->{'LAST-MODIFIED'})) {
+		$edited = $ical->{'LAST-MODIFIED'}->getDateTime();
+		$ev['edited'] = datetime_convert('UTC','UTC',$edited->format(\DateTime::W3C));
+	}
+
+	if(isset($ical->LOCATION))
+		$ev['location'] = (string) $ical->LOCATION;
+	if(isset($ical->DESCRIPTION))
+		$ev['description'] = (string) $ical->DESCRIPTION;
+	if(isset($ical->SUMMARY))
+		$ev['summary'] = (string) $ical->SUMMARY;
+
+	if(isset($ical->UID)) {
+		$evuid = (string) $ical->UID;
+		$r = q("SELECT * FROM event WHERE event_hash = '%s' AND uid = %d LIMIT 1",
+			dbesc($evuid),
+			intval($uid)
+		);
+		if($r)
+			$ev['event_hash'] = $evuid;
+		else
+			$ev['external_id'] = $evuid;
+	}
+		
+	if($ev['summary'] && $ev['start']) {
+		$ev['event_xchan'] = $channel['channel_hash'];
+		$ev['uid']         = $channel['channel_id'];
+		$ev['account']     = $channel['channel_account_id'];
+		$ev['private']     = 1;
+		$ev['allow_cid']   = '<' . $channel['channel_hash'] . '>';
+
+		logger('storing event: ' . print_r($ev,true), LOGGER_ALL);		
+		$event = event_store_event($ev);
+		if($event) {
+			$item_id = event_store_item($ev,$event);
+			return true;
+		}
+	}
+
+	return false;
+
 }
 
 

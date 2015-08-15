@@ -161,7 +161,7 @@ function filter_insecure($channel_id, $arr) {
 
 	$ret = array();
 
-	if((! intval(get_config($channel_id, 'system', 'filter_insecure_collections'))) || (! $arr))
+	if((! intval(get_pconfig($channel_id, 'system', 'filter_insecure_collections'))) || (! $arr))
 		return $arr;
 
 	$str = '';
@@ -866,6 +866,9 @@ function get_item_elements($x) {
 	$arr['comment_policy'] = (($x['comment_scope']) ? htmlspecialchars($x['comment_scope'], ENT_COMPAT,'UTF-8',false) : 'contacts');
 
 	$arr['sig']          = (($x['signature']) ? htmlspecialchars($x['signature'],  ENT_COMPAT,'UTF-8',false) : '');
+
+	if(array_key_exists('diaspora_signature',$x) && is_array($x['diaspora_signature']))
+		$x['diaspora_signature'] = json_encode($x['diaspora_signature']);
 
 	$arr['diaspora_meta'] = (($x['diaspora_signature']) ? json_encode(crypto_encapsulate($x['diaspora_signature'],$key)) : '');
 	$arr['object']       = activity_sanitise($x['object']);
@@ -3344,6 +3347,9 @@ function check_item_source($uid, $item) {
 	if($r[0]['src_channel_xchan'] === $item['owner_xchan'])
 		return false;
 
+
+	// since we now have connection filters with more features, the source filter is redundant and can probably go away
+
 	if(! $r[0]['src_patt'])
 		return true;
 
@@ -3358,10 +3364,10 @@ function check_item_source($uid, $item) {
 		foreach($words as $word) {
 			if(substr($word,0,1) === '#' && $tags) {
 				foreach($tags as $t)
-					if(($t['type'] == TERM_HASHTAG) && ((substr($t,1) === substr($word,1)) || (substr($word,1) === '*')))
+					if(($t['type'] == TERM_HASHTAG) && (($t['term'] === substr($word,1)) || (substr($word,1) === '*')))
 						return true;
 			}
-			elseif((strpos($word,'/') === 0) && preg_match($word,$body))
+			elseif((strpos($word,'/') === 0) && preg_match($word,$text))
 				return true;
 			elseif(stristr($text,$word) !== false)
 				return true;
@@ -3382,14 +3388,21 @@ function post_is_importable($item,$abook) {
 	if(! $item)
 		return false;
 
-	if((! $abook['abook_incl']) && (! $abook['abook_excl']))
+	if(! ($abook['abook_incl'] || $abook['abook_excl']))
 		return true;
 
-
 	require_once('include/html2plain.php');
+
+	unobscure($item);
+
 	$text = prepare_text($item['body'],$item['mimetype']);
 	$text = html2plain($text);
 
+	$lang = null;
+
+	if((strpos($abook['abook_incl'],'lang=') !== false) || (strpos($abook['abook_excl'],'lang=') !== false)) {
+		$lang = detect_language($text);
+	}
 	$tags = ((count($item['term'])) ? $item['term'] : false);
 
 	// exclude always has priority
@@ -3401,10 +3414,12 @@ function post_is_importable($item,$abook) {
 			$word = trim($word);
 			if(substr($word,0,1) === '#' && $tags) {
 				foreach($tags as $t)
-					if(($t['type'] == TERM_HASHTAG) && ((substr($t,1) === substr($word,1)) || (substr($word,1) === '*')))
+					if(($t['type'] == TERM_HASHTAG) && (($t['term'] === substr($word,1)) || (substr($word,1) === '*')))
 						return false;
 			}
-			elseif((strpos($word,'/') === 0) && preg_match($word,$body))
+			elseif((strpos($word,'/') === 0) && preg_match($word,$text))
+				return false;
+			elseif((strpos($word,'lang=') === 0) && ($lang) && (strcasecmp($lang,trim(substr($word,5))) == 0))
 				return false;
 			elseif(stristr($text,$word) !== false)
 				return false;
@@ -3418,10 +3433,12 @@ function post_is_importable($item,$abook) {
 			$word = trim($word);
 			if(substr($word,0,1) === '#' && $tags) {
 				foreach($tags as $t)
-					if(($t['type'] == TERM_HASHTAG) && ((substr($t,1) === substr($word,1)) || (substr($word,1) === '*')))
+					if(($t['type'] == TERM_HASHTAG) && (($t['term'] === substr($word,1)) || (substr($word,1) === '*')))
 						return true;
 			}
-			elseif((strpos($word,'/') === 0) && preg_match($word,$body))
+			elseif((strpos($word,'/') === 0) && preg_match($word,$text))
+				return true;
+			elseif((strpos($word,'lang=') === 0) && ($lang) && (strcasecmp($lang,trim(substr($word,5))) == 0))
 				return true;
 			elseif(stristr($text,$word) !== false)
 				return true;
@@ -3762,6 +3779,9 @@ function consume_feed($xml, $importer, &$contact, $pass = 0) {
 					$author['owner_link']   = $contact['url'];
 					$author['owner_avatar'] = $contact['thumb'];
 				}
+
+				if(! post_is_importable($datarray,$contact))
+					continue;
 
 				logger('consume_feed: author ' . print_r($author,true),LOGGER_DEBUG);
 
