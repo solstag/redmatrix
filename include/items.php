@@ -2791,6 +2791,19 @@ function send_status_notifications($post_id,$item) {
 		}
 	}
 
+        // Força notificações pra Mobiliza
+        $x = q("select xchan_addr from xchan where xchan_hash = '%s' limit 1",
+                dbesc($item['owner_xchan'])
+        );
+        if($x) {
+                if(strpos($x[0]['xchan_addr'],'ubs-')==0 && strpos($x[0]['xchan_addr'],'@mobiliza.org.br')) {
+                        $notify=true;
+                }
+                elseif($x[0]['xchan_addr']=='pesquisadoresmboi@mobiliza.org.br') {
+                        $notify=true;
+                }
+        }
+
 	$link =  get_app()->get_baseurl() . '/display/' . $item['mid'];
 
 	$y = q("select id from notify where link = '%s' and uid = %d limit 1",
