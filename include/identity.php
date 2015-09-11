@@ -5,7 +5,7 @@
 
 require_once('include/zot.php');
 require_once('include/crypto.php');
-
+require_once('include/menu.php');
 
 /**
  * @brief Called when creating a new channel.
@@ -583,6 +583,35 @@ function identity_basic_export($channel_id, $items = false) {
 	if($r)
 		$ret['chatroom'] = $r;
 
+
+	$r = q("select * from event where uid = %d",
+		intval($channel_id)
+	);
+	if($r)
+		$ret['event'] = $r;
+
+	$r = q("select * from item where resource_type = 'event' and uid = %d",
+		intval($channel_id)
+	);
+	if($r) {
+		$ret['event_item'] = array();
+		xchan_query($r);
+		$r = fetch_post_tags($r,true);
+		foreach($r as $rr)
+			$ret['event_item'][] = encode_item($rr,true);
+	}
+
+	$x = menu_list($channel_id);
+	if($x) {
+		$ret['menu'] = array();
+		for($y = 0; $y < count($x); $y ++) {
+			$m = menu_fetch($x[$y]['menu_name'],$channel_id,$ret['channel']['channel_hash']);
+			if($m)
+				$ret['menu'][] = menu_element($m);
+		}
+	}
+
+
 	if(! $items)
 		return $ret;
 
@@ -637,6 +666,7 @@ function identity_export_year($channel_id,$year,$month = 0) {
 		$target_month = '01';
 
 	$ret = array();
+
 	$mindate = datetime_convert('UTC','UTC',$year . '-' . $target_month . '-01 00:00:00');
 	if($month && $month < 12)
 		$maxdate = datetime_convert('UTC','UTC',$year . '-' . $target_month_plus . '-01 00:00:00');

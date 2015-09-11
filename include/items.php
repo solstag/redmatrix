@@ -1263,7 +1263,7 @@ function encode_item($item,$mirror = false) {
 		$x['comment_scope'] = $c_scope;
 
 	if($item['term'])
-		$x['tags']        = encode_item_terms($item['term']);
+		$x['tags']        = encode_item_terms($item['term'],$mirror);
 
 	if($item['diaspora_meta'])
 		$x['diaspora_signature'] = crypto_unencapsulate(json_decode($item['diaspora_meta'],true),$key);
@@ -1351,6 +1351,11 @@ function encode_item_terms($terms) {
 	$ret = array();
 
 	$allowed_export_terms = array( TERM_UNKNOWN, TERM_HASHTAG, TERM_MENTION, TERM_CATEGORY, TERM_BOOKMARK );
+
+	if($mirror) {
+		$allowed_export_terms[] = TERM_PCATEGORY;
+		$allowed_export_terms[] = TERM_FILE;
+	}
 
 	if($terms) {
 		foreach($terms as $term) {
@@ -4597,10 +4602,12 @@ function zot_feed($uid,$observer_hash,$arr) {
 
 	$items = array();
 
-	/** @FIXME fix this part for PostgreSQL */
+	/** @FIXME re-unite these SQL statements. There is no need for them to be separate. The mySQL is convoluted with misuse of group by. As it stands, there is a slight difference where the postgres version doesn't remove the duplicate parents up to 100. In practice this doesn't matter. It could be made to match behavior by adding "distinct on (parent) " to the front of the selection list, at a not-worth-it performance penalty (page temp results to disk). duplicates are still ignored in the in() clause, you just get less than 100 parents if there are many children. */
 
 	if(ACTIVE_DBTYPE == DBTYPE_POSTGRES) {
-		return array();
+		$groupby = '';
+	} else {
+		$groupby = 'GROUP BY parent';
 	}
 
 	if(is_sys_channel($uid)) {
@@ -4608,7 +4615,7 @@ function zot_feed($uid,$observer_hash,$arr) {
 			WHERE uid != %d
 			AND item_private = 0 AND item_restrict = 0 AND uid in (" . stream_perms_api_uids(PERMS_PUBLIC,10,1) . ")
 			AND (item_flags &  %d) > 0
-			$sql_extra GROUP BY parent ORDER BY created ASC $limit",
+			$sql_extra $groupby ORDER BY created ASC $limit",
 			intval($uid),
 			intval(ITEM_WALL)
 		);
@@ -4617,7 +4624,7 @@ function zot_feed($uid,$observer_hash,$arr) {
 		$r = q("SELECT parent, created, postopts from item
 			WHERE uid = %d AND item_restrict = 0
 			AND (item_flags &  %d) > 0
-			$sql_extra GROUP BY parent ORDER BY created ASC $limit",
+			$sql_extra $groupby ORDER BY created ASC $limit",
 			intval($uid),
 			intval(ITEM_WALL)
 		);
