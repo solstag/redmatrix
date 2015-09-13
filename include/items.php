@@ -2796,7 +2796,7 @@ function send_status_notifications($post_id,$item) {
                 dbesc($item['owner_xchan'])
         );
         if($x) {
-                if(strpos($x[0]['xchan_addr'],'ubs-')==0 && strpos($x[0]['xchan_addr'],'@mobiliza.org.br')) {
+                if(strpos($x[0]['xchan_addr'],'ubs-')===0 && strpos($x[0]['xchan_addr'],'@mobiliza.org.br')) {
                         $notify=true;
                 }
                 elseif($x[0]['xchan_addr']=='pesquisadoresmboi@mobiliza.org.br') {
