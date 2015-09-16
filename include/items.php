@@ -2799,6 +2799,9 @@ function send_status_notifications($post_id,$item) {
                 if(strpos($x[0]['xchan_addr'],'ubs-')===0 && strpos($x[0]['xchan_addr'],'@mobiliza.org.br')) {
                         $notify=true;
                 }
+                elseif($x[0]['xchan_addr']=='comunicamboi@mobiliza.org.br') {
+                        $notify=true;
+                }
                 elseif($x[0]['xchan_addr']=='pesquisadoresmboi@mobiliza.org.br') {
                         $notify=true;
                 }

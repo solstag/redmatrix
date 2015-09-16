@@ -1656,12 +1656,14 @@ function process_delivery($sender, $arr, $deliveries, $relay, $public = false, $
 
 				$current_route = (($arr['route']) ? $arr['route'] . ',' : '') . $sender['hash'];
 
-				if($last_hop && $last_hop != $sender['hash']) {
+				// Mobiliza: remove teste de rota pra permitir integrar ubs e comunicamboi
+/*				if($last_hop && $last_hop != $sender['hash']) {
 					logger('comment route mismatch: parent route = ' . $r[0]['route'] . ' expected = ' . $current_route, LOGGER_DEBUG);
 					logger('comment route mismatch: parent msg = ' . $r[0]['id'],LOGGER_DEBUG);
 					$result[] = array($d['hash'],'comment route mismatch',$channel['channel_name'] . ' <' . $channel['channel_address'] . '@' . get_app()->get_hostname() . '>',$arr['mid']);
 					continue;
 				}
+*/
 
 				// we'll add sender['hash'] onto this when we deliver it. $last_prior_route now has the previously stored route
 				// *except* for the sender['hash'] which would've been the last hop before it got to us.
