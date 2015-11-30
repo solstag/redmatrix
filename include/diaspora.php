@@ -1233,6 +1233,10 @@ function diaspora_reshare($importer,$xml,$msg) {
 		return 202;
 	}
 
+	if(! post_is_importable($datarray,$contact)) {
+		logger('diaspora_post: filtering this author.');
+		return 202;
+	}
 
 	$result = item_store($datarray);
 
@@ -2749,8 +2753,10 @@ function diaspora_send_relay($item,$owner,$contact,$public_batch = false) {
 	$sublike = false;
 
 
-	if($item['verb'] === ACTIVITY_LIKE && $item['thr_parent']) {
-		$sublike = true;
+	if($item['verb'] === ACTIVITY_LIKE) {
+		if($item['thr_parent'] && ($item['thr_parent'] !== $item['parent_mid'])) {
+			$sublike = true;
+		}
 	}
 
 

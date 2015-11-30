@@ -1,6 +1,6 @@
 <?php
 
-define( 'UPDATE_VERSION' , 1152 );
+define( 'UPDATE_VERSION' , 1160 );
 
 /**
  *
@@ -1754,3 +1754,41 @@ function update_r1151() {
 	return UPDATE_SUCCESS;
 
 }
+
+function update_r1152() {
+	return UPDATE_SUCCESS;
+}
+
+function update_r1153() {
+	return UPDATE_SUCCESS;
+}
+
+function update_r1154() {
+	return UPDATE_SUCCESS;
+}
+
+function update_r1155() {
+	return UPDATE_SUCCESS;
+}
+
+function update_r1156() {
+	return UPDATE_SUCCESS;
+}
+
+function update_r1157() {
+	$r1 = q("alter table site add site_project char(255) not null default '' ");
+    $r2 = q("create index site_project on site ( site_project ) ");
+    if($r1 && $r2)
+        return UPDATE_SUCCESS;
+    return UPDATE_FAILED;
+
+}
+
+function update_r1158() {
+	return UPDATE_SUCCESS;
+}
+
+function update_r1159() {
+	return UPDATE_SUCCESS;
+}
+

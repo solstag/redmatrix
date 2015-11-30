@@ -8,6 +8,8 @@ require_once("html2plain.php");
 require_once('include/security.php');
 require_once('include/photos.php');
 require_once('include/items.php');
+require_once('include/attach.php');
+require_once('include/api_auth.php');
 
 	/*
 	 *
@@ -65,96 +67,6 @@ require_once('include/items.php');
 							'auth'=>$auth);
 	}
 
-	/**
-	 * Simple HTTP Login
-	 */
-
-	function api_login(&$a){
-		// login with oauth
-		try {
-			$oauth = new FKOAuth1();
-			$req = OAuthRequest::from_request();
-			list($consumer,$token) = $oauth->verify_request($req);
-//			list($consumer,$token) = $oauth->verify_request(OAuthRequest::from_request());
-			if (!is_null($token)){
-				$oauth->loginUser($token->uid);
-
-				$a->set_oauth_key($consumer->key);
-
-				call_hooks('logged_in', $a->user);
-				return;
-			}
-			echo __file__.__line__.__function__."<pre>"; 
-//			var_dump($consumer, $token); 
-			die();
-		}
-		catch(Exception $e) {
-			logger(__file__.__line__.__function__."\n".$e);
-		}
-
-		
-		// workaround for HTTP-auth in CGI mode
-		if(x($_SERVER,'REDIRECT_REMOTE_USER')) {
-		 	$userpass = base64_decode(substr($_SERVER["REDIRECT_REMOTE_USER"],6)) ;
-			if(strlen($userpass)) {
-			 	list($name, $password) = explode(':', $userpass);
-				$_SERVER['PHP_AUTH_USER'] = $name;
-				$_SERVER['PHP_AUTH_PW'] = $password;
-			}
-		}
-
-		if(x($_SERVER,'HTTP_AUTHORIZATION')) {
-		 	$userpass = base64_decode(substr($_SERVER["HTTP_AUTHORIZATION"],6)) ;
-			if(strlen($userpass)) {
-			 	list($name, $password) = explode(':', $userpass);
-				$_SERVER['PHP_AUTH_USER'] = $name;
-				$_SERVER['PHP_AUTH_PW'] = $password;
-			}
-		}
-
-
-		if (!isset($_SERVER['PHP_AUTH_USER'])) {
-		   logger('API_login: ' . print_r($_SERVER,true), LOGGER_DEBUG);
-		    header('WWW-Authenticate: Basic realm="Red"');
-		    header('HTTP/1.0 401 Unauthorized');
-		    die('This api requires login');
-		}
-		
-		// process normal login request
-		require_once('include/auth.php');
-		$channel_login = 0;
-		$record = account_verify_password($_SERVER['PHP_AUTH_USER'],$_SERVER['PHP_AUTH_PW']);
-		if(! $record) {
-	        $r = q("select * from channel where channel_address = '%s' limit 1",
-    	        dbesc($_SERVER['PHP_AUTH_USER'])
-        	);
-        	if ($r) {
-            	$x = q("select * from account where account_id = %d limit 1",
-                	intval($r[0]['channel_account_id'])
-            	);
-            	if ($x) {
-					$record = account_verify_password($x[0]['account_email'],$_SERVER['PHP_AUTH_PW']);
-					if($record)
-						$channel_login = $r[0]['channel_id'];
-				}
-			}
-			if(! $record) {	
-				logger('API_login failure: ' . print_r($_SERVER,true), LOGGER_DEBUG);
-				header('WWW-Authenticate: Basic realm="Red"');
-				header('HTTP/1.0 401 Unauthorized');
-				die('This api requires login');
-			}
-		}
-
-		require_once('include/security.php');
-		authenticate_success($record);
-
-		if($channel_login)
-			change_channel($channel_login);
-
-		$_SESSION['allow_api'] = true;
-	}
-	
 	/**************************
 	 *  MAIN API ENTRY POINT  *
 	 **************************/
@@ -618,6 +530,38 @@ require_once('include/items.php');
 		}
 	}
 	api_register_func('api/red/channel/stream','api_channel_stream', true);
+
+	function api_attach_list(&$a,$type) {
+		logger('api_user: ' . api_user());
+		json_return_and_die(attach_list_files(api_user(),get_observer_hash(),'','','','created asc'));
+	}
+	api_register_func('api/red/files','api_attach_list', true);
+
+
+	function api_file_detail(&$a,$type) {
+		if (api_user()===false) return false;
+		if(! $_REQUEST['file_id']) return false;
+		$r = q("select * from attach where uid = %d and hash = '%s' limit 1",
+			intval(api_user()),
+			dbesc($_REQUEST['file_id'])
+		);
+		if($r) {
+			if($r[0]['flags'] & ATTACH_FLAG_DIR) {
+				$r[0]['is_dir'] = '1';
+				$r[0]['data'] = '';
+			}
+			elseif($r[0]['flags'] & ATTACH_FLAG_OS) 
+				$r[0]['data'] = base64_encode(file_get_contents(dbunescbin($r[0]['data'])));
+			else
+				$r[0]['data'] = base64_encode(dbunescbin($r[0]['data']));
+				
+			$ret = array('attach' => $r[0]);
+			json_return_and_die($ret);
+		}
+		killme();
+	}
+
+	api_register_func('api/red/file', 'api_file_detail', true);
 
 
 	function api_albums(&$a,$type) {

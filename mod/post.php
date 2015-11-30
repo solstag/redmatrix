@@ -119,7 +119,7 @@ function post_init(&$a) {
 		}
 
 		// Try and find a hubloc for the person attempting to auth
-		$x = q("select * from hubloc left join xchan on xchan_hash = hubloc_hash where hubloc_addr = '%s' order by hubloc_id desc limit 1",
+		$x = q("select * from hubloc left join xchan on xchan_hash = hubloc_hash where hubloc_addr = '%s' order by hubloc_id desc",
 			dbesc($address)
 		);
 
@@ -130,7 +130,7 @@ function post_init(&$a) {
 				$j = json_decode($ret['body'], true);
 				if ($j)
 					import_xchan($j);
-				$x = q("select * from hubloc left join xchan on xchan_hash = hubloc_hash where hubloc_addr = '%s' order by hubloc_id desc limit 1",
+				$x = q("select * from hubloc left join xchan on xchan_hash = hubloc_hash where hubloc_addr = '%s' order by hubloc_id desc",
 					dbesc($address)
 				);
 			}
@@ -146,160 +146,168 @@ function post_init(&$a) {
 			goaway($desturl);
 		}
 
-		logger('mod_zot: auth request received from ' . $x[0]['hubloc_addr'] ); 
 
-		// check credentials and access
+		foreach($x as $xx) {
+			logger('mod_zot: auth request received from ' . $xx['hubloc_addr'] ); 
 
-		// If they are already authenticated and haven't changed credentials, 
-		// we can save an expensive network round trip and improve performance.
+			// check credentials and access
 
-		$remote = remote_channel();
-		$result = null;
-		$remote_service_class = '';
-		$remote_level = 0;
-		$remote_hub = $x[0]['hubloc_url'];
-		$DNT = 0;
+			// If they are already authenticated and haven't changed credentials, 
+			// we can save an expensive network round trip and improve performance.
 
-		// Also check that they are coming from the same site as they authenticated with originally.
+			$remote = remote_channel();
+			$result = null;
+			$remote_service_class = '';
+			$remote_level = 0;
+			$remote_hub = $xx['hubloc_url'];
+			$DNT = 0;
 
-		$already_authed = ((($remote) && ($x[0]['hubloc_hash'] == $remote) && ($x[0]['hubloc_url'] === $_SESSION['remote_hub'])) ? true : false); 
-		if($delegate && $delegate !== $_SESSION['delegate_channel'])
-			$already_authed = false;
+			// Also check that they are coming from the same site as they authenticated with originally.
 
-		$j = array();
+			$already_authed = ((($remote) && ($xx['hubloc_hash'] == $remote) && ($xx['hubloc_url'] === $_SESSION['remote_hub'])) ? true : false); 
+			if($delegate && $delegate !== $_SESSION['delegate_channel'])
+				$already_authed = false;
 
-		if (! $already_authed) {
+			$j = array();
 
-			// Auth packets MUST use ultra top-secret hush-hush mode - e.g. the entire packet is encrypted using the site private key
-			// The actual channel sending the packet ($c[0]) is not important, but this provides a generic zot packet with a sender
-			// which can be verified
+			if (! $already_authed) {
+
+				// Auth packets MUST use ultra top-secret hush-hush mode - e.g. the entire packet is encrypted using the site private key
+				// The actual channel sending the packet ($c[0]) is not important, but this provides a generic zot packet with a sender
+				// which can be verified
  
-			$p = zot_build_packet($c[0],$type = 'auth_check', array(array('guid' => $x[0]['hubloc_guid'],'guid_sig' => $x[0]['hubloc_guid_sig'])), $x[0]['hubloc_sitekey'], $sec);
-			if ($test) {
-				$ret['message'] .= 'auth check packet created using sitekey ' . $x[0]['hubloc_sitekey'] . EOL;
-				$ret['message'] .= 'packet contents: ' . $p . EOL;
-			}
-
-			$result = zot_zot($x[0]['hubloc_callback'],$p);
-
-			if (! $result['success']) {
-				logger('mod_zot: auth_check callback failed.');
+				$p = zot_build_packet($c[0],$type = 'auth_check', array(array('guid' => $xx['hubloc_guid'],'guid_sig' => $xx['hubloc_guid_sig'])), $xx['hubloc_sitekey'], $sec);
 				if ($test) {
-					$ret['message'] .= 'auth check request to your site returned .' . print_r($result, true) . EOL;
-					json_return_and_die($ret);
+					$ret['message'] .= 'auth check packet created using sitekey ' . $xx['hubloc_sitekey'] . EOL;
+					$ret['message'] .= 'packet contents: ' . $p . EOL;
 				}
 
-				goaway($desturl);
-			}
-			$j = json_decode($result['body'], true);
-			if (! $j) {
-				logger('mod_zot: auth_check json data malformed.');
-				if($test) {
-					$ret['message'] .= 'json malformed: ' . $result['body'] . EOL;
-					json_return_and_die($ret);
-				}
-			}
-		}
+				$result = zot_zot($xx['hubloc_callback'],$p);
 
-		if ($test) {
-			$ret['message'] .= 'auth check request returned .' . print_r($j, true) . EOL;
-		}
-
-		if ($already_authed || $j['success']) {
-			if ($j['success']) {
-				// legit response, but we do need to check that this wasn't answered by a man-in-middle
-				if (! rsa_verify($sec . $x[0]['xchan_hash'],base64url_decode($j['confirm']),$x[0]['xchan_pubkey'])) {
-					logger('mod_zot: auth: final confirmation failed.');
+				if (! $result['success']) {
+					logger('mod_zot: auth_check callback failed.');
 					if ($test) {
-						$ret['message'] .= 'final confirmation failed. ' . $sec . print_r($j,true) . print_r($x[0],true);
-						json_return_and_die($ret);
+						$ret['message'] .= 'auth check request to your site returned .' . print_r($result, true) . EOL;
+						continue;
 					}
-
-					goaway($desturl);
+					continue;
 				}
-				if (array_key_exists('service_class',$j))
-					$remote_service_class = $j['service_class'];
-				if (array_key_exists('level',$j))
-					$remote_level = $j['level'];
-				if (array_key_exists('DNT',$j))
-					$DNT = $j['DNT'];
-			}
-			// everything is good... maybe
-			if(local_channel()) {
-
-				// tell them to logout if they're logged in locally as anything but the target remote account
-				// in which case just shut up because they don't need to be doing this at all.
-
-				if ($a->channel['channel_hash'] != $x[0]['xchan_hash']) {
-					logger('mod_zot: auth: already authenticated locally as somebody else.');
-					notice( t('Remote authentication blocked. You are logged into this site locally. Please logout and retry.') . EOL);
-					if ($test) {
-						$ret['message'] .= 'already logged in locally with a conflicting identity.' . EOL;
-						json_return_and_die($ret);
+				$j = json_decode($result['body'], true);
+				if (! $j) {
+					logger('mod_zot: auth_check json data malformed.');
+					if($test) {
+						$ret['message'] .= 'json malformed: ' . $result['body'] . EOL;
+						continue;
 					}
 				}
-				goaway($desturl);
 			}
-
-			// log them in
 
 			if ($test) {
-				$ret['success'] = true;
-				$ret['message'] .= 'Authentication Success!' . EOL;
-				json_return_and_die($ret);
+				$ret['message'] .= 'auth check request returned .' . print_r($j, true) . EOL;
 			}
 
-			$delegation_success = false;
-			if ($delegate) {
-				$r = q("select * from channel left join xchan on channel_hash = xchan_hash where xchan_addr = '%s' limit 1",
-					dbesc($delegate)
+			if ($already_authed || $j['success']) {
+				if ($j['success']) {
+					// legit response, but we do need to check that this wasn't answered by a man-in-middle
+					if (! rsa_verify($sec . $xx['xchan_hash'],base64url_decode($j['confirm']),$xx['xchan_pubkey'])) {
+						logger('mod_zot: auth: final confirmation failed.');
+						if ($test) {
+							$ret['message'] .= 'final confirmation failed. ' . $sec . print_r($j,true) . print_r($xx,true);
+							continue;
+						}
+
+						continue;
+					}
+					if (array_key_exists('service_class',$j))
+						$remote_service_class = $j['service_class'];
+					if (array_key_exists('level',$j))
+						$remote_level = $j['level'];
+					if (array_key_exists('DNT',$j))
+						$DNT = $j['DNT'];
+				}
+				// everything is good... maybe
+				if(local_channel()) {
+
+					// tell them to logout if they're logged in locally as anything but the target remote account
+					// in which case just shut up because they don't need to be doing this at all.
+
+					if ($a->channel['channel_hash'] != $xx['xchan_hash']) {
+						logger('mod_zot: auth: already authenticated locally as somebody else.');
+						notice( t('Remote authentication blocked. You are logged into this site locally. Please logout and retry.') . EOL);
+						if ($test) {
+							$ret['message'] .= 'already logged in locally with a conflicting identity.' . EOL;
+							continue;
+						}
+					}
+					continue;
+				}
+
+				// log them in
+
+				if ($test) {
+					$ret['success'] = true;
+					$ret['message'] .= 'Authentication Success!' . EOL;
+					json_return_and_die($ret);
+				}
+
+				$delegation_success = false;
+				if ($delegate) {
+					$r = q("select * from channel left join xchan on channel_hash = xchan_hash where xchan_addr = '%s' limit 1",
+						dbesc($delegate)
+					);
+					if ($r && intval($r[0]['channel_id'])) {
+						$allowed = perm_is_allowed($r[0]['channel_id'],$xx['xchan_hash'],'delegate');
+						if ($allowed) {
+							$_SESSION['delegate_channel'] = $r[0]['channel_id'];
+							$_SESSION['delegate'] = $xx['xchan_hash'];
+							$_SESSION['account_id'] = intval($r[0]['channel_account_id']);
+							require_once('include/security.php');
+							change_channel($r[0]['channel_id']);
+							$delegation_success = true;
+						}
+					}
+				}
+
+				$_SESSION['authenticated'] = 1;
+				if (! $delegation_success) {
+					$_SESSION['visitor_id'] = $xx['xchan_hash'];
+					$_SESSION['my_url'] = $xx['xchan_url'];
+					$_SESSION['my_address'] = $address;
+					$_SESSION['remote_service_class'] = $remote_service_class;
+					$_SESSION['remote_level'] = $remote_level;
+					$_SESSION['remote_hub'] = $remote_hub;
+					$_SESSION['DNT'] = $DNT;
+				}
+
+				$arr = array('xchan' => $xx, 'url' => $desturl, 'session' => $_SESSION);
+				call_hooks('magic_auth_success',$arr);
+				$a->set_observer($xx);
+				require_once('include/security.php');
+				$a->set_groups(init_groups_visitor($_SESSION['visitor_id']));
+				info(sprintf( t('Welcome %s. Remote authentication successful.'),$xx['xchan_name']));
+				logger('mod_zot: auth success from ' . $xx['xchan_addr']); 
+				q("update hubloc set hubloc_status =  (hubloc_status | %d ) where hubloc_id = %d ",
+						intval(HUBLOC_WORKS),
+						intval($xx['hubloc_id'])
 				);
-				if ($r && intval($r[0]['channel_id'])) {
-					$allowed = perm_is_allowed($r[0]['channel_id'],$x[0]['xchan_hash'],'delegate');
-					if ($allowed) {
-						$_SESSION['delegate_channel'] = $r[0]['channel_id'];
-						$_SESSION['delegate'] = $x[0]['xchan_hash'];
-						$_SESSION['account_id'] = intval($r[0]['channel_account_id']);
-						require_once('include/security.php');
-						change_channel($r[0]['channel_id']);
-						$delegation_success = true;
-					}
+			} else {
+				if ($test) {
+					$ret['message'] .= 'auth failure. ' . print_r($_REQUEST,true) . print_r($j,true) . EOL;
+					continue;
 				}
+				logger('mod_zot: magic-auth failure - not authenticated: ' . $xx['xchan_addr']);
+				q("update hubloc set hubloc_status =  (hubloc_status | %d ) where hubloc_id = %d ",
+					intval(HUBLOC_RECEIVE_ERROR),
+					intval($xx['hubloc_id'])
+				);
 			}
 
-			$_SESSION['authenticated'] = 1;
-			if (! $delegation_success) {
-				$_SESSION['visitor_id'] = $x[0]['xchan_hash'];
-				$_SESSION['my_url'] = $x[0]['xchan_url'];
-				$_SESSION['my_address'] = $address;
-				$_SESSION['remote_service_class'] = $remote_service_class;
-				$_SESSION['remote_level'] = $remote_level;
-				$_SESSION['remote_hub'] = $remote_hub;
-				$_SESSION['DNT'] = $DNT;
-			}
-
-			$arr = array('xchan' => $x[0], 'url' => $desturl, 'session' => $_SESSION);
-			call_hooks('magic_auth_success',$arr);
-			$a->set_observer($x[0]);
-			require_once('include/security.php');
-			$a->set_groups(init_groups_visitor($_SESSION['visitor_id']));
-			info(sprintf( t('Welcome %s. Remote authentication successful.'),$x[0]['xchan_name']));
-			logger('mod_zot: auth success from ' . $x[0]['xchan_addr']); 
-			q("update hubloc set hubloc_status =  (hubloc_status | %d ) where hubloc_id = %d ",
-					intval(HUBLOC_WORKS),
-					intval($x[0]['hubloc_id'])
-			);
-		} else {
 			if ($test) {
-				$ret['message'] .= 'auth failure. ' . print_r($_REQUEST,true) . print_r($j,true) . EOL;
-				json_return_and_die($ret);
+				$ret['message'] .= 'auth failure fallthrough ' . print_r($_REQUEST,true) . print_r($j,true) . EOL;
+				continue;
 			}
-			logger('mod_zot: magic-auth failure - not authenticated: ' . $x[0]['xchan_addr']);
-			q("update hubloc set hubloc_status =  (hubloc_status | %d ) where hubloc_id = %d ",
-				intval(HUBLOC_RECEIVE_ERROR),
-				intval($x[0]['hubloc_id'])
-			);
 		}
+
 
 		/**
 		 * @FIXME we really want to save the return_url in the session before we
@@ -308,13 +316,12 @@ function post_init(&$a) {
 		 * But z_root() probably isn't where you really want to go.
 		 */
 
-		if ($test) {
-			$ret['message'] .= 'auth failure fallthrough ' . print_r($_REQUEST,true) . print_r($j,true) . EOL;
-			json_return_and_die($ret);
-		}
-
 		if(strstr($desturl,z_root() . '/rmagic'))
 			goaway(z_root());
+
+		if ($test) {
+			json_return_and_die($ret);
+		}
 
 		goaway($desturl);
 	}
@@ -666,16 +673,16 @@ function post_post(&$a) {
 
 	/* Check if the sender is already verified here */
 
-	$hub = zot_gethub($sender);
+	$hubs = zot_gethub($sender,true);
 
-	if (! $hub) {
+	if (! $hubs) {
 
 		/* Have never seen this guid or this guid coming from this location. Check it and register it. */
 
 		// (!!) this will validate the sender
 		$result = zot_register_hub($sender);
 
-		if ((! $result['success']) || (! ($hub = zot_gethub($sender)))) {
+		if ((! $result['success']) || (! ($hubs = zot_gethub($sender,true)))) {
 			$ret['message'] = 'Hub not available.';
 			logger('mod_zot: no hub');
 			json_return_and_die($ret);
@@ -683,46 +690,66 @@ function post_post(&$a) {
 	}
 
 
-	// Update our DB to show when we last communicated successfully with this hub
-	// This will allow us to prune dead hubs from using up resources
+	foreach($hubs as $hub) {
 
-	$r = q("update hubloc set hubloc_connected = '%s' where hubloc_id = %d",
-		dbesc(datetime_convert()),
-		intval($hub['hubloc_id'])
-	);
+		$sitekey = $hub['hubloc_sitekey'];
 
-	// a dead hub came back to life - reset any tombstones we might have
+		if(array_key_exists('sitekey',$sender) && $sender['sitekey']) {
 
-	if ($hub['hubloc_status'] & HUBLOC_OFFLINE) {
-		q("update hubloc set hubloc_status = (hubloc_status & ~%d) where hubloc_id = %d",
-			intval(HUBLOC_OFFLINE),
-			intval($hub['hubloc_id'])		
+			/*
+			 * This hub has now been proven to be valid.
+			 * Any hub with the same URL and a different sitekey cannot be valid.
+			 * Get rid of them (mark them deleted). There's a good chance they were re-installs.
+			 */
+
+			q("update hubloc set hubloc_flags = ( hubloc_flags | %d ) where hubloc_url = '%s' and hubloc_sitekey != '%s' ",
+				intval(HUBLOC_FLAGS_DELETED),
+				dbesc($hub['hubloc_url']),
+				dbesc($sender['sitekey'])
+			);
+
+			$sitekey = $sender['sitekey'];
+		}
+
+		// $sender['sitekey'] is a new addition to the protcol to distinguish
+		// hublocs coming from re-installed sites. Older sites will not provide
+		// this field and we have to still mark them valid, since we can't tell
+		// if this hubloc has the same sitekey as the packet we received.
+
+		// Update our DB to show when we last communicated successfully with this hub
+		// This will allow us to prune dead hubs from using up resources
+
+		$r = q("update hubloc set hubloc_connected = '%s' where hubloc_id = %d and hubloc_sitekey = '%s' ",
+			dbesc(datetime_convert()),
+			intval($hub['hubloc_id']),
+			dbesc($sitekey)
 		);
-		if ($r[0]['hubloc_flags'] & HUBLOC_FLAGS_ORPHANCHECK) {
-			q("update hubloc set hubloc_flags = (hubloc_flags & ~%d) where hubloc_id = %d",
-				intval(HUBLOC_FLAGS_ORPHANCHECK),
-				intval($hub['hubloc_id'])
+
+		// a dead hub came back to life - reset any tombstones we might have
+
+		if ($hub['hubloc_status'] & HUBLOC_OFFLINE) {
+			q("update hubloc set hubloc_status = (hubloc_status & ~%d) where hubloc_id = %d and hubloc_sitekey = '%s' ",
+				intval(HUBLOC_OFFLINE),
+				intval($hub['hubloc_id']),
+				dbesc($sitekey)		
+			);
+			if ($r[0]['hubloc_flags'] & HUBLOC_FLAGS_ORPHANCHECK) {
+				q("update hubloc set hubloc_flags = (hubloc_flags & ~%d) where hubloc_id = %d and hubloc_sitekey = '%s' ",
+					intval(HUBLOC_FLAGS_ORPHANCHECK),
+					intval($hub['hubloc_id']),
+					dbesc($sitekey)
+				);
+			}
+
+			q("update xchan set xchan_flags = (xchan_flags & ~%d) where (xchan_flags & %d)>0 and xchan_hash = '%s'",
+				intval(XCHAN_FLAGS_ORPHAN),
+				intval(XCHAN_FLAGS_ORPHAN),
+				dbesc($hub['hubloc_hash'])
 			);
 		}
-		q("update xchan set xchan_flags = (xchan_flags & ~%d) where (xchan_flags & %d)>0 and xchan_hash = '%s'",
-			intval(XCHAN_FLAGS_ORPHAN),
-			intval(XCHAN_FLAGS_ORPHAN),
-			dbesc($hub['hubloc_hash'])
-		);
+
+		$connecting_url = $hub['hubloc_url'];
 	}
-
-
-	/*
-	 * This hub has now been proven to be valid.
-	 * Any hub with the same URL and a different sitekey cannot be valid.
-	 * Get rid of them (mark them deleted). There's a good chance they were re-installs.
-	 */
-
-	q("update hubloc set hubloc_flags = ( hubloc_flags | %d ) where hubloc_url = '%s' and hubloc_sitekey != '%s' ",
-		intval(HUBLOC_FLAGS_DELETED),
-		dbesc($hub['hubloc_url']),
-		dbesc($hub['hubloc_sitekey'])
-	);
 
 	/** @TODO check which hub is primary and take action if mismatched */
 
@@ -925,7 +952,7 @@ function post_post(&$a) {
 
 	if ($msgtype === 'notify') {
 
-		logger('notify received from ' . $hub['hubloc_url']);
+		logger('notify received from ' . $connecting_url);
 
 
 		$async = get_config('system','queued_fetch');

@@ -806,10 +806,15 @@ function title_is_body($title, $body) {
 }
 
 
-function get_item_elements($x) {
+function get_item_elements($x,$allow_code = false) {
+
 
 	$arr = array();
-	$arr['body']         = (($x['body']) ? htmlspecialchars($x['body'],ENT_COMPAT,'UTF-8',false) : '');
+
+	if($allow_code)
+		$arr['body'] = $x['body'];
+	else
+		$arr['body']         = (($x['body']) ? htmlspecialchars($x['body'],ENT_COMPAT,'UTF-8',false) : '');
 
 	$key = get_config('system','pubkey');
 
@@ -919,7 +924,6 @@ function get_item_elements($x) {
 			logger('get_item_elements: message verification failed.');
 	}
 
-
 	// if it's a private post, encrypt it in the DB.
 	// We have to do that here because we need to cleanse the input and prevent bad stuff from getting in,
 	// and we need plaintext to do that.
@@ -948,9 +952,68 @@ function get_item_elements($x) {
 		$arr['postopts'] = $x['postopts'];
 		$arr['resource_id'] = $x['resource_id'];
 		$arr['resource_type'] = $x['resource_type'];
-		$arr['item_restrict'] = $x['item_restrict'];
-		$arr['item_flags'] = $x['item_flags'];
 		$arr['attach'] = $x['attach'];
+
+		if(! array_key_exists('item_origin',$x)) {
+			$arr['item_restrict'] = $x['item_restrict'];
+			$arr['item_flags'] = $x['item_flags'];
+		}
+
+		if(array_key_exists('item_origin',$x) && intval($x['item_origin']))
+			$arr['item_flags'] |= ITEM_ORIGIN;
+		if(array_key_exists('item_unseen',$x) && intval($x['item_unseen']))
+			$arr['item_flags'] |= ITEM_UNSEEN;
+		if(array_key_exists('item_starred',$x) && intval($x['item_starred']))
+			$arr['item_flags'] |= ITEM_STARRED;
+		if(array_key_exists('item_uplink',$x) && intval($x['item_uplink']))
+			$arr['item_flags'] |= ITEM_UPLINK;
+		if(array_key_exists('item_consensus',$x) && intval($x['item_consensus']))
+			$arr['item_flags'] |= ITEM_CONSENSUS;
+		if(array_key_exists('item_wall',$x) && intval($x['item_wall']))
+			$arr['item_flags'] |= ITEM_WALL;
+		if(array_key_exists('item_thread_top',$x) && intval($x['item_thread_top']))
+			$arr['item_flags'] |= ITEM_THREAD_TOP;
+		if(array_key_exists('item_notshown',$x) && intval($x['item_notshown']))
+			$arr['item_flags'] |= ITEM_NOTSHOWN;
+		if(array_key_exists('item_nsfw',$x) && intval($x['item_nsfw']))
+			$arr['item_flags'] |= ITEM_NSFW;
+		if(array_key_exists('item_mentionsme',$x) && intval($x['item_mentionsme']))
+			$arr['item_flags'] |= ITEM_MENTIONSME;
+		if(array_key_exists('item_nocomment',$x) && intval($x['item_nocomment']))
+			$arr['item_flags'] |= ITEM_NOCOMMENT;
+		if(array_key_exists('item_retained',$x) && intval($x['item_retained']))
+			$arr['item_flags'] |= ITEM_RETAINED;
+		if(array_key_exists('item_rss',$x) && intval($x['item_rss']))
+			$arr['item_flags'] |= ITEM_RSS;
+
+
+		if(array_key_exists('item_deleted',$x)&& intval($x['item_deleted']))
+			$arr['item_restrict'] |= ITEM_DELETED;
+		if(array_key_exists('item_unpublished',$x)&& intval($x['item_unpublished']))
+			$arr['item_restrict'] |= ITEM_UNPUBLISHED;
+		if(array_key_exists('item_delayed',$x)&& intval($x['item_delayed']))
+			$arr['item_restrict'] |= ITEM_DELAYED_PUBLISH;
+		if(array_key_exists('item_pending_remove',$x)&& intval($x['item_pending_remove']))
+			$arr['item_restrict'] |= ITEM_PENDING_REMOVE;
+		if(array_key_exists('item_type',$x)) {
+			switch(intval($x['item_type'])) {
+				case 1:
+					$arr['item_restrict'] |= ITEM_BUILDBLOCK;
+					break;
+				case 2:
+					$arr['item_restrict'] |= ITEM_PDL;
+					break;
+				case 3:
+					$arr['item_restrict'] |= ITEM_WEBPAGE;
+					break;
+				case 4:
+					$arr['item_restrict'] |= ITEM_BUG;
+					break;
+				case 0:
+				default:
+					break;
+			}
+		}
 	}
 
 	return $arr;
@@ -1501,7 +1564,7 @@ function encode_item_flags($item) {
 	return $ret;
 }
 
-function encode_mail($item) {
+function encode_mail($item,$extended = false) {
 	$x = array();
 	$x['type'] = 'mail';
 	$x['encoding'] = 'zot';
@@ -1535,6 +1598,18 @@ function encode_mail($item) {
 		$x['body']  = '';
 	}
 
+	if($extended) {
+		$x['conv_guid'] = $item['conv_guid'];
+		if($item['mail_flags'] & MAIL_DELETED)
+			$x['flags'][] = 'deleted';
+		if($item['mail_flags'] & MAIL_REPLIED)
+			$x['flags'][] = 'replied';
+		if($item['mail_flags'] & MAIL_ISREPLY)
+			$x['flags'][] = 'isreply';
+		if($item['mail_flags'] & MAIL_SEEN)
+			$x['flags'][] = 'seen';
+	}
+
 	return $x;
 }
 
@@ -1558,6 +1633,18 @@ function get_mail_elements($x) {
 	if($x['flags'] && is_array($x['flags'])) {
 		if(in_array('recalled',$x['flags'])) {
 			$arr['mail_flags'] |= MAIL_RECALLED;
+		}
+		if(in_array('replied',$x['flags'])) {
+			$arr['mail_flags'] |= MAIL_REPLIED;
+		}
+		if(in_array('isreply',$x['flags'])) {
+			$arr['mail_flags'] |= MAIL_ISREPLY;
+		}
+		if(in_array('seen',$x['flags'])) {
+			$arr['mail_flags'] |= MAIL_SEEN;
+		}
+		if(in_array('deleted',$x['flags'])) {
+			$arr['mail_flags'] |= MAIL_DELETED;
 		}
 	}
 
