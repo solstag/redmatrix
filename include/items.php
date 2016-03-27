@@ -125,6 +125,7 @@ function collect_recipients($item, &$private_envelope) {
 	// This should prevent complex delivery chains from getting overly complex by not
 	// sending to anybody who is on our list of those who sent it to us.
 
+logger('bugale - collect_recipients - id: ' . $item['id'] . ' - recipients: ' . var_export($recipients,true) . ' - route: ' . var_export($item['route'],true));
 	if($item['route']) {
 		$route = explode(',',$item['route']);
 		if(count($route)) {
@@ -2424,6 +2425,8 @@ function item_store($arr, $allow_exec = false) {
 	if($r) {
 		logger('item_store: duplicate item ignored. ' . print_r($arr,true));
 		$ret['message'] = 'duplicate post.';
+		$ret['duplicate_item_id'] = $r[0]['id']; // Mobiliza: see include/zot.php
+		logger('bugale: duplicate_item_id: ' . print_r($ret['duplicate_item_id'],true));
 		return $ret;
 	}
 

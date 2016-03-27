@@ -454,6 +454,8 @@ function notifier_run($argv, $argc){
 			$private = false;
 			$recipients = collect_recipients($parent_item,$private);
 
+logger('bugale - item: ' . $item_id . ' - recipients: ' . var_export($recipients,true));
+
 			// FIXME add any additional recipients such as mentions, etc.
 
 			// don't send deletions onward for other people's stuff

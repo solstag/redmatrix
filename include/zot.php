@@ -1760,7 +1760,7 @@ logger('sender: ' . print_r($sender,true));
 			continue;
 		}
 
-		$r = q("select id, edited, item_restrict, item_flags, mid, parent_mid from item where mid = '%s' and uid = %d limit 1",
+		$r = q("select id, edited, item_restrict, item_flags, mid, parent_mid, owner_xchan from item where mid = '%s' and uid = %d limit 1",
 			dbesc($arr['mid']),
 			intval($channel['channel_id'])
 		);
@@ -1769,7 +1769,7 @@ logger('sender: ' . print_r($sender,true));
 			$item_id = $r[0]['id'];
 			if($r[0]['item_restrict'] & ITEM_DELETED) {
 				// It was deleted locally.
-				$DR->update('update ignored');
+				$DR->update('update ignored (deleted)');
 				$result[] = $DR->get();
 				continue;
 			}
@@ -1778,7 +1778,7 @@ logger('sender: ' . print_r($sender,true));
 				$arr['id'] = $r[0]['id'];
 				$arr['uid'] = $channel['channel_id'];
 				if(($arr['mid'] == $arr['parent_mid']) && (! post_is_importable($arr,$abook))) {
-					$DR->update('update ignored');
+					$DR->update('update ignored (not importable)');
 					$result[] = $DR->get();
 				}
 				else {
@@ -1790,13 +1790,18 @@ logger('sender: ' . print_r($sender,true));
 				}
 			}
 			else {
-				$DR->update('update ignored');
+				$DR->update('update ignored (nothing)');
 				$result[] = $DR->get();
 
 				// We need this line to ensure wall-to-wall comments are relayed (by falling through to the relay bit),
 				// and at the same time not relay any other relayable posts more than once, because to do so is very wasteful.
-				if(! ($r[0]['item_flags'] & ITEM_ORIGIN))
-					continue;
+				if(! ($r[0]['item_flags'] & ITEM_ORIGIN)) {
+					// Mobiliza: se voltou prum owner deixa relay
+					if(! $r[0]['owner_xchan'] === $channel['hash'] ) {
+						logger('bugale - item_id: ' . var_export($item_id,true) . ' - owner: ' . var_export($r[0]['owner_xchan'],true) . ' - chan: ' . var_export($channel['hash'],true)); 
+						continue;
+					}
+				}
 			}
 		}
 		else {
@@ -1825,13 +1830,18 @@ logger('sender: ' . print_r($sender,true));
 					if(! $relay)
 						add_source_route($item_id,$sender['hash']);
 				}
-				$DR->update(($item_id) ? 'posted' : 'storage failed: ' . $item_result['message']);
+				$DR->update(($item_id) ? 'posted ' . $item_id : 'storage failed: ' . $item_result['message']);
 				$result[] = $DR->get();
+
+				// Mobiliza: make sure we relay if duplicate as the first arrival might not have
+				if($item_result['message'] == 'duplicate post.') $item_id = $item_result['duplicate_item_id'];
+				logger('bugale process_delivery - item_id: ' . $item_id . ' - message: ' . $item_result['message']);
 			}
 		}
 
+		logger('process_delivery: we have relay: ' . var_export($relay,true) . ' and item_id: ' . $item_id);
 		if($relay && $item_id) {
-			logger('process_delivery: invoking relay');
+			logger('process_delivery: invoking relay for item_id: ' . $item_id);
 			proc_run('php','include/notifier.php','relay',intval($item_id));
 			$DR->addto_update('relayed');
 			$result[] = $DR->get();
@@ -1956,6 +1966,7 @@ function delete_imported_item($sender, $item, $uid, $relay) {
 		intval($uid)
 	);
 	if ($r) {
+// Mobiliza: qdo autor do top recebe delete dum grupo pelo autor de comentario via grupo ele ja trocou o owner e nunca eh deletado
 		if ($r[0]['author_xchan'] === $sender['hash'] || $r[0]['owner_xchan'] === $sender['hash'] || $r[0]['source_xchan'] === $sender['hash'])
 			$ownership_valid = true;
 
@@ -2002,6 +2013,9 @@ function delete_imported_item($sender, $item, $uid, $relay) {
 					intval($r[0]['id']),
 					intval($r[0]['uid'])
 				);
+			}
+			elseif ($r[0]['id'] != $r[0]['parent']) { // Mobiliza: evitar loop de comentarios (dado que perdemos o teste de rota?)
+				return false;
 			}
 		}
 

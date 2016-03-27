@@ -243,22 +243,26 @@ function attach_by_hash($hash, $rev = 0) {
 		return $ret;
 	}
 
+	// Mobiliza TODO: checar se tem perm pra view storage de alguma ubs ou comunicamboi?
 	if(! perm_is_allowed($r[0]['uid'], get_observer_hash(), 'view_storage')) {
-		$ret['message'] = t('Permission denied.');
-		return $ret;
+		if(! local_channel()) {
+			$ret['message'] = t('Permission denied.');
+			return $ret;
+		}
 	}
 
 	$sql_extra = permissions_sql($r[0]['uid']);
+	$sql_gambi = permissions_gambi_sql($r[0]['uid'], $hash);
 
 	// Now we'll see if we can access the attachment
 
-	$r = q("SELECT * FROM attach WHERE hash = '%s' and uid = %d $sql_extra LIMIT 1",
+	$r = q("SELECT * FROM attach WHERE hash = '%s' and uid = %d and ( (true $sql_gambi) or (true $sql_extra) ) LIMIT 1",
 		dbesc($hash),
 		intval($r[0]['uid'])
 	);
 
 	if(! $r) {
-		$ret['message'] = t('Permission denied.');
+		$ret['message'] = t('Permission denied, g: '. $sql_gambi);
 		return $ret;
 	}
 

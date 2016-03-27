@@ -208,6 +208,57 @@ function permissions_sql($owner_id, $remote_observer = null) {
 	return $sql;
 }
 
+function permissions_gambi_sql($owner_id, $hash) {
+
+	$local_channel = local_channel();
+
+	/**
+	 * Construct permissions
+	 *
+	 * default permissions - anonymous user
+	 */
+
+	$sql = " AND allow_cid = '' 
+			 AND allow_gid = '' 
+			 AND deny_cid  = '' 
+			 AND deny_gid  = '' 
+	";
+
+	/**
+	 * Profile owner - everything is visible
+	 */
+
+	if(($local_channel) && ($local_channel == $owner_id)) {
+		$sql = '';
+	}
+
+	/**
+	 * Authenticated visitor. Unless pre-verified, 
+	 * check that the contact belongs to this $owner_id
+	 * and load the groups the visitor belongs to.
+	 * If pre-verified, the caller is expected to have already
+	 * done this and passed the groups into this function.
+	 */
+
+	else {
+		$observer = (($remote_observer) ? $remote_observer : get_observer_hash());
+		if($local_channel) {
+			$r=q("SELECT hash from attach WHERE hash = '%s' and uid = %d and allow_cid like '%s' limit 1", dbesc($hash), intval($owner_id), '%hD3fKmKn%' );
+			if($r){
+				$sql=" AND true ";
+			}
+			else{
+				$sql=" AND false ";
+			}
+		}
+	}
+
+	return $sql;
+}
+
+
+
+
 /**
  * @brief Creates an addiontal SQL where statement to check permissions for an item.
  *
