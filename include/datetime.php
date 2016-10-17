@@ -215,7 +215,8 @@ function datetimesel($format, $min, $max, $default, $id = 'datetimepicker', $pic
 
 	$pickers = '';
 	if(!$pickdate) $pickers .= ',datepicker: false';
-	if(!$picktime) $pickers .= ',timepicker: false';
+	if(!$picktime) $pickers .= ',timepicker: false, closeOnDateSelect:true';
+
 
 	$extra_js = '';
 	if($minfrom != '') 
