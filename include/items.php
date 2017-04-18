@@ -2313,7 +2313,7 @@ function item_store($arr, $allow_exec = false) {
 	if($d2 > $d1)
 		$arr['item_restrict'] = $arr['item_restrict'] | ITEM_DELAYED_PUBLISH;
 
-	$arr['llink'] = z_root() . '/display/' . $arr['mid'];
+	$arr['llink'] = z_root() . '/display/' . urlencode($arr['mid']);
 
 	if(! $arr['plink'])
 		$arr['plink'] = $arr['llink'];
