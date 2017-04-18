@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: 2016-06-17.1432\n"
+"Project-Id-Version: 2016-07-08.1453\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-06-17 00:01-0700\n"
+"POT-Creation-Date: 2016-07-08 00:01-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -194,7 +194,7 @@ msgstr ""
 msgid "Manage/Edit profiles"
 msgstr ""
 
-#: ../../include/nav.php:95 ../../include/identity.php:979
+#: ../../include/nav.php:95 ../../include/identity.php:987
 msgid "Edit Profile"
 msgstr ""
 
@@ -839,7 +839,7 @@ msgstr ""
 
 #: ../../include/widgets.php:136 ../../include/widgets.php:175
 #: ../../include/Contact.php:107 ../../include/conversation.php:956
-#: ../../include/identity.php:956 ../../mod/match.php:64
+#: ../../include/identity.php:964 ../../mod/match.php:64
 #: ../../mod/directory.php:316 ../../mod/suggest.php:52
 msgid "Connect"
 msgstr ""
@@ -1105,7 +1105,7 @@ msgid "View all"
 msgstr ""
 
 #: ../../include/ItemObject.php:179 ../../include/conversation.php:1712
-#: ../../include/identity.php:1266 ../../include/taxonomy.php:396
+#: ../../include/identity.php:1274 ../../include/taxonomy.php:396
 #: ../../mod/photos.php:1019
 msgctxt "noun"
 msgid "Like"
@@ -1477,8 +1477,8 @@ msgstr ""
 msgid "Address Book"
 msgstr ""
 
-#: ../../include/apps.php:138 ../../include/identity.php:1240
-#: ../../include/identity.php:1357 ../../mod/profperm.php:112
+#: ../../include/apps.php:138 ../../include/identity.php:1248
+#: ../../include/identity.php:1365 ../../mod/profperm.php:112
 msgid "Profile"
 msgstr ""
 
@@ -1669,7 +1669,7 @@ msgid "Finishes:"
 msgstr ""
 
 #: ../../include/bb2diaspora.php:481 ../../include/event.php:50
-#: ../../include/identity.php:1007 ../../mod/directory.php:302
+#: ../../include/identity.php:1015 ../../mod/directory.php:302
 #: ../../mod/events.php:684
 msgid "Location:"
 msgstr ""
@@ -3055,11 +3055,11 @@ msgstr ""
 msgid "Default Profile"
 msgstr ""
 
-#: ../../include/identity.php:759
+#: ../../include/identity.php:767
 msgid "Requested channel is not available."
 msgstr ""
 
-#: ../../include/identity.php:806 ../../mod/achievements.php:11
+#: ../../include/identity.php:814 ../../mod/achievements.php:11
 #: ../../mod/blocks.php:29 ../../mod/profile.php:16 ../../mod/connect.php:13
 #: ../../mod/editblock.php:29 ../../mod/editlayout.php:27
 #: ../../mod/editwebpage.php:28 ../../mod/filestorage.php:54
@@ -3067,188 +3067,188 @@ msgstr ""
 msgid "Requested profile is not available."
 msgstr ""
 
-#: ../../include/identity.php:969 ../../mod/profiles.php:774
+#: ../../include/identity.php:977 ../../mod/profiles.php:774
 msgid "Change profile photo"
 msgstr ""
 
-#: ../../include/identity.php:975
+#: ../../include/identity.php:983
 msgid "Profiles"
 msgstr ""
 
-#: ../../include/identity.php:975
+#: ../../include/identity.php:983
 msgid "Manage/edit profiles"
 msgstr ""
 
-#: ../../include/identity.php:976 ../../mod/profiles.php:775
+#: ../../include/identity.php:984 ../../mod/profiles.php:775
 msgid "Create New Profile"
 msgstr ""
 
-#: ../../include/identity.php:991 ../../mod/profiles.php:786
+#: ../../include/identity.php:999 ../../mod/profiles.php:786
 msgid "Profile Image"
 msgstr ""
 
-#: ../../include/identity.php:994
+#: ../../include/identity.php:1002
 msgid "visible to everybody"
 msgstr ""
 
-#: ../../include/identity.php:995 ../../mod/profiles.php:669
+#: ../../include/identity.php:1003 ../../mod/profiles.php:669
 #: ../../mod/profiles.php:790
 msgid "Edit visibility"
 msgstr ""
 
-#: ../../include/identity.php:1011 ../../include/identity.php:1250
+#: ../../include/identity.php:1019 ../../include/identity.php:1258
 msgid "Gender:"
 msgstr ""
 
-#: ../../include/identity.php:1012 ../../include/identity.php:1294
+#: ../../include/identity.php:1020 ../../include/identity.php:1302
 msgid "Status:"
 msgstr ""
 
-#: ../../include/identity.php:1013 ../../include/identity.php:1305
+#: ../../include/identity.php:1021 ../../include/identity.php:1313
 msgid "Homepage:"
 msgstr ""
 
-#: ../../include/identity.php:1014
+#: ../../include/identity.php:1022
 msgid "Online Now"
 msgstr ""
 
-#: ../../include/identity.php:1097 ../../include/identity.php:1175
+#: ../../include/identity.php:1105 ../../include/identity.php:1183
 #: ../../mod/ping.php:324
 msgid "g A l F d"
 msgstr ""
 
-#: ../../include/identity.php:1098 ../../include/identity.php:1176
+#: ../../include/identity.php:1106 ../../include/identity.php:1184
 msgid "F d"
 msgstr ""
 
-#: ../../include/identity.php:1143 ../../include/identity.php:1215
+#: ../../include/identity.php:1151 ../../include/identity.php:1223
 #: ../../mod/ping.php:346
 msgid "[today]"
 msgstr ""
 
-#: ../../include/identity.php:1154
+#: ../../include/identity.php:1162
 msgid "Birthday Reminders"
 msgstr ""
 
-#: ../../include/identity.php:1155
+#: ../../include/identity.php:1163
 msgid "Birthdays this week:"
 msgstr ""
 
-#: ../../include/identity.php:1208
+#: ../../include/identity.php:1216
 msgid "[No description]"
 msgstr ""
 
-#: ../../include/identity.php:1226
+#: ../../include/identity.php:1234
 msgid "Event Reminders"
 msgstr ""
 
-#: ../../include/identity.php:1227
+#: ../../include/identity.php:1235
 msgid "Events this week:"
 msgstr ""
 
-#: ../../include/identity.php:1248 ../../mod/settings.php:1056
+#: ../../include/identity.php:1256 ../../mod/settings.php:1056
 msgid "Full Name:"
 msgstr ""
 
-#: ../../include/identity.php:1255
+#: ../../include/identity.php:1263
 msgid "Like this channel"
 msgstr ""
 
-#: ../../include/identity.php:1279
+#: ../../include/identity.php:1287
 msgid "j F, Y"
 msgstr ""
 
-#: ../../include/identity.php:1280
+#: ../../include/identity.php:1288
 msgid "j F"
 msgstr ""
 
-#: ../../include/identity.php:1287
+#: ../../include/identity.php:1295
 msgid "Birthday:"
 msgstr ""
 
-#: ../../include/identity.php:1291 ../../mod/directory.php:297
+#: ../../include/identity.php:1299 ../../mod/directory.php:297
 msgid "Age:"
 msgstr ""
 
-#: ../../include/identity.php:1300
+#: ../../include/identity.php:1308
 #, php-format
 msgid "for %1$d %2$s"
 msgstr ""
 
-#: ../../include/identity.php:1303 ../../mod/profiles.php:691
+#: ../../include/identity.php:1311 ../../mod/profiles.php:691
 msgid "Sexual Preference:"
 msgstr ""
 
-#: ../../include/identity.php:1307 ../../mod/profiles.php:693
+#: ../../include/identity.php:1315 ../../mod/profiles.php:693
 #: ../../mod/directory.php:313
 msgid "Hometown:"
 msgstr ""
 
-#: ../../include/identity.php:1309
+#: ../../include/identity.php:1317
 msgid "Tags:"
 msgstr ""
 
-#: ../../include/identity.php:1311 ../../mod/profiles.php:694
+#: ../../include/identity.php:1319 ../../mod/profiles.php:694
 msgid "Political Views:"
 msgstr ""
 
-#: ../../include/identity.php:1313
+#: ../../include/identity.php:1321
 msgid "Religion:"
 msgstr ""
 
-#: ../../include/identity.php:1315 ../../mod/directory.php:315
+#: ../../include/identity.php:1323 ../../mod/directory.php:315
 msgid "About:"
 msgstr ""
 
-#: ../../include/identity.php:1317
+#: ../../include/identity.php:1325
 msgid "Hobbies/Interests:"
 msgstr ""
 
-#: ../../include/identity.php:1319 ../../mod/profiles.php:697
+#: ../../include/identity.php:1327 ../../mod/profiles.php:697
 msgid "Likes:"
 msgstr ""
 
-#: ../../include/identity.php:1321 ../../mod/profiles.php:698
+#: ../../include/identity.php:1329 ../../mod/profiles.php:698
 msgid "Dislikes:"
 msgstr ""
 
-#: ../../include/identity.php:1323
+#: ../../include/identity.php:1331
 msgid "Contact information and Social Networks:"
 msgstr ""
 
-#: ../../include/identity.php:1325
+#: ../../include/identity.php:1333
 msgid "My other channels:"
 msgstr ""
 
-#: ../../include/identity.php:1327
+#: ../../include/identity.php:1335
 msgid "Musical interests:"
 msgstr ""
 
-#: ../../include/identity.php:1329
+#: ../../include/identity.php:1337
 msgid "Books, literature:"
 msgstr ""
 
-#: ../../include/identity.php:1331
+#: ../../include/identity.php:1339
 msgid "Television:"
 msgstr ""
 
-#: ../../include/identity.php:1333
+#: ../../include/identity.php:1341
 msgid "Film/dance/culture/entertainment:"
 msgstr ""
 
-#: ../../include/identity.php:1335
+#: ../../include/identity.php:1343
 msgid "Love/Romance:"
 msgstr ""
 
-#: ../../include/identity.php:1337
+#: ../../include/identity.php:1345
 msgid "Work/employment:"
 msgstr ""
 
-#: ../../include/identity.php:1339
+#: ../../include/identity.php:1347
 msgid "School/education:"
 msgstr ""
 
-#: ../../include/identity.php:1359
+#: ../../include/identity.php:1367
 msgid "Like this thing"
 msgstr ""
 
